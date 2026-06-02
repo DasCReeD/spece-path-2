@@ -996,30 +996,7 @@ class GameManager {
       });
     }
 
-    // Touch layout toggle button
-    const btnTouchLayoutToggle = document.getElementById('btn-touch-layout-toggle');
-    if (btnTouchLayoutToggle) {
-      btnTouchLayoutToggle.addEventListener('click', () => {
-        gameAudio.playClick();
-        const hybridLayout = document.getElementById('layout-dpad-hybrid');
-        const classicLayout = document.getElementById('layout-classic-console');
-        if (hybridLayout.classList.contains('active')) {
-          hybridLayout.classList.remove('active');
-          hybridLayout.classList.add('hidden');
-          classicLayout.classList.remove('hidden');
-          classicLayout.classList.add('active');
-          btnTouchLayoutToggle.innerText = 'LAYOUT: CLASSIC CONSOLE';
-          btnTouchLayoutToggle.classList.add('active');
-        } else {
-          classicLayout.classList.remove('active');
-          classicLayout.classList.add('hidden');
-          hybridLayout.classList.remove('hidden');
-          hybridLayout.classList.add('active');
-          btnTouchLayoutToggle.innerText = 'LAYOUT: D-PAD HYBRID';
-          btnTouchLayoutToggle.classList.remove('active');
-        }
-      });
-    }
+    // Deprecated multi-layout toggle removed for single unified premium layout
 
     // Floating Touch Camera buttons
     const btnTouchCamMode = document.getElementById('btn-touch-cam-mode');
@@ -1352,33 +1329,48 @@ class GameManager {
       btn.addEventListener('pointerleave', pressEnd);
     });
 
-    // Joystick drag and steer
+    // Joystick 2D circular drag and steer (PS2 Analog Stick styling & continuous response)
     const joystickBase = document.getElementById('joystick-base');
     const joystickKnob = document.getElementById('joystick-knob');
     if (joystickBase && joystickKnob) {
       let isDragging = false;
+      const maxDist = 50; // Max drag radius in pixels
 
       const handleMove = (e) => {
         if (!isDragging) return;
         const rect = joystickBase.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
-        const maxDist = rect.width / 2 - 15;
+        const centerY = rect.top + rect.height / 2;
+
         let dx = e.clientX - centerX;
-        dx = Math.max(-maxDist, Math.min(maxDist, dx));
-        joystickKnob.style.transform = `translate(${dx}px, -50%)`;
+        let dy = e.clientY - centerY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > maxDist) {
+          dx = (dx / dist) * maxDist;
+          dy = (dy / dist) * maxDist;
+        }
+
+        joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
         this.keyboard.setTouchSteerAmount(dx / maxDist);
       };
 
       const handleEnd = (e) => {
         if (!isDragging) return;
         isDragging = false;
+        joystickBase.classList.remove('dragging');
         joystickBase.releasePointerCapture(e.pointerId);
-        joystickKnob.style.transform = 'translate(0px, -50%)';
+
+        // Quick, springy return animation
+        joystickKnob.style.transition = 'transform 0.15s cubic-bezier(0.25, 0.8, 0.25, 1.4)';
+        joystickKnob.style.transform = 'translate(0px, 0px)';
         this.keyboard.setTouchSteerAmount(0);
       };
 
       joystickBase.addEventListener('pointerdown', (e) => {
         isDragging = true;
+        joystickBase.classList.add('dragging');
+        joystickKnob.style.transition = 'none'; // Disable transition for lag-free dragging
         joystickBase.setPointerCapture(e.pointerId);
         handleMove(e);
       });

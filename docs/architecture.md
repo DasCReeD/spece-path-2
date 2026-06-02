@@ -243,8 +243,8 @@ Tile = {
 | [levelLoader.js](file:///c:/dev/Sky%20roads/levelLoader.js) | 955 | 35 KB | Asynchronous geometry compilation, BoxGeometry/rounded archways, palette mappings, finish neon arches, gap/tunnel mesh optimizations |
 | [audio.js](file:///c:/dev/Sky%20roads/audio.js) | 494 | 18 KB | Procedural sound synthesis via Web Audio API, speed-modulated dual-oscillator engine hum, jump sweeps, refill chimes, boost sweeps, wall collisions, landing rebound variations, win arpeggios, background synthesizer music playback |
 | [levels.js](file:///c:/dev/Sky%20roads/levels.js) | 76 | 2 KB | Lazy-loading level pack manifest & caching utility to dynamically load `./data/standard_levels.json` and `./data/xmas_levels.json` without bloating initial page loads |
-| [index.html](file:///c:/dev/Sky%20roads/index.html) | 641 | 37 KB | DOM structure: canvas container, HUD overlays, touch controls overlays [D-Pad Hybrid, Classic Console layouts], settings popups with calibration sliders, level select buttons |
-| [index.css](file:///c:/dev/Sky%20roads/index.css) | 1,869 | 49 KB | Synthwave design system: glassmorphic styles, neon glow micro-animations, full-scale layouts, landscape/portrait media query scaling, touch dock UI |
+| [index.html](file:///c:/dev/Sky%20roads/index.html) | 641 | 37 KB | DOM structure: canvas container, HUD overlays, unified next-gen touch controls (left 2D analog stick, right arced action buttons), settings popups with calibration sliders, level select buttons |
+| [index.css](file:///c:/dev/Sky%20roads/index.css) | 1,869 | 49 KB | Synthwave design system: glassmorphic styles, neon glow micro-animations, full-scale layouts, landscape/portrait media query scaling, PS2-style circular virtual joystick, and right-side arced button layouts |
 | [vite.config.js](file:///c:/dev/Sky%20roads/vite.config.js) | 17 | 325 B | Dev server (port 3000, auto-open), build (esbuild minify), test (jsdom) |
 | [package.json](file:///c:/dev/Sky%20roads/package.json) | 21 | 361 B | Package manifest, scripts: `dev`, `build`, `preview`, `test` |
 
@@ -292,11 +292,12 @@ Special tile behaviors (boost, sticky, slippery, burning, refill) are determined
 
 The UI uses a synthwave/cyberpunk aesthetic defined through CSS custom properties (`:root` variables) for colors, fonts, and neon shadow effects. Glassmorphism cards (`backdrop-filter: blur`) overlay the 3D viewport.
 
-### 9. Multi-Touch HUD Overlay & Layout Customization
+### 9. Unified Premium Analog Stick HUD & Smart Snapping
 
-To support mobile play, a high-fidelity glassmorphic overlay is injected dynamically with two distinct layouts:
-- **D-Pad Hybrid**: Left on-screen D-pad for steering and acceleration alongside right throttle/jump action triggers.
-- **Classic Console**: Left virtual slider joystick for analog-like steering, with right-side action buttons for discrete braking, thrusting, and jumping.
+To support mobile play, a high-fidelity glassmorphic overlay is injected dynamically with a unified controller configuration:
+- **PS2-Style Virtual Analog Stick**: Left on-screen 2D floating joystick tracking continuous pointer displacement with concentric rubber-style ridges, an inner grip dome, and active neon highlights.
+- **Right-Hand Arced Controls**: Curved action cluster for Thrust, Jump, and Brake buttons matching the thumb sweep of the player.
+- **Smart Lane-Snapping Magnetism**: A proportional spring-damping alignment system in the physics loop that centers the ship onto the nearest track lane center if the steering stick is in deadzone/released.
 Controls utilize multi-touch (`touchstart`, `touchend`, pointer capture) to guarantee zero latency and simultaneous button presses.
 
 ### 10. Seamless Level Stitching (Infinite Road Mode)

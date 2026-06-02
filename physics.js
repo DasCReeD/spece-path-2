@@ -219,16 +219,37 @@ export class PhysicsEngine {
 
     if (keyboard.mouseControlsEnabled || keyboard.touchControlsEnabled) {
       let steerVal = 0;
+      let activeSteering = false;
+
       if (keyboard.steerAmount !== undefined && keyboard.steerAmount !== 0) {
         steerVal = keyboard.steerAmount;
+        activeSteering = true;
       } else if (keyboard.left) {
         steerVal = -1;
+        activeSteering = true;
       } else if (keyboard.right) {
         steerVal = 1;
+        activeSteering = true;
       }
 
       // Smoothly interpolate (lerp) towards target analogue steer speed
-      const targetSteerSpeed = steerVal * this.maxSteerSpeed;
+      let targetSteerSpeed = steerVal * this.maxSteerSpeed;
+
+      // Smart Lane Snapping/Magnetism:
+      // Applies when using touch controls, the user is not actively steering (joystick is neutral/released),
+      // the ship is on the ground, and it is not dead.
+      if (keyboard.touchControlsEnabled && !activeSteering && this.onGround && !this.isDead) {
+        // Road is 7 lanes, TILE_WIDTH is 2.0. Lanes centered at -6, -4, -2, 0, 2, 4, 6.
+        const nearestLaneX = Math.max(-6.0, Math.min(6.0, Math.round(this.position.x / 2.0) * 2.0));
+        const distToLane = nearestLaneX - this.position.x;
+        
+        // Only pull if we are within a reasonable distance (e.g. less than 1.0 unit / half tile width)
+        if (Math.abs(distToLane) < 1.0) {
+          const snapStrength = 4.0; // Tight, organic spring snapping pull
+          targetSteerSpeed = distToLane * snapStrength;
+        }
+      }
+
       this.velocity.x += (targetSteerSpeed - this.velocity.x) * 15.0 * dt;
     } else {
       if (keyboard.left) {

@@ -798,9 +798,6 @@
 
 <!-- Mobile Touch HUD Overlay -->
 <div id="mobile-touch-hud" class="touch-hud hidden pointer-events-none">
-  <button id="btn-touch-layout-toggle" class="touch-layout-btn pointer-events-auto" title="Cycle Control Layout">
-    LAYOUT: D-PAD HYBRID
-  </button>
   <button id="btn-touch-boat-throttle" class="touch-boat-btn pointer-events-auto" title="Toggle Boat Throttle Mode">
     BOAT: OFF
   </button>
@@ -812,17 +809,26 @@
     <button id="btn-touch-zoom-out" class="touch-cam-btn" title="Zoom Out">🔍 -</button>
   </div>
 
-  <!-- D-Pad Hybrid Layout Container -->
-  <div id="layout-dpad-hybrid" class="touch-layout-container active">
-    <div class="dpad-hybrid-container pointer-events-auto">
-      <div class="dpad-btn dpad-up" data-action="forward">▲</div>
-      <div class="dpad-btn dpad-left" data-action="left">◀</div>
-      <div class="dpad-center-stub"></div>
-      <div class="dpad-btn dpad-right" data-action="right">▶</div>
-      <div class="dpad-btn dpad-down" data-action="backward">▼</div>
+  <!-- Unified Premium Analog Stick HUD -->
+  <div class="touch-hud-main-container">
+    <!-- Left Side: Circular Joystick -->
+    <div class="joystick-outer-wrap pointer-events-auto">
+      <div id="joystick-base" class="joystick-base">
+        <div id="joystick-knob" class="joystick-knob">
+          <div class="joystick-knob-grip"></div>
+        </div>
+        <div class="joystick-crosshair-h"></div>
+        <div class="joystick-crosshair-v"></div>
+      </div>
+      <div class="joystick-guide-text">◀ STEER ▶</div>
     </div>
-    
-    <div class="right-buttons-hybrid pointer-events-auto">
+
+    <!-- Right Side: Curved Ergonomic Action Buttons -->
+    <div class="right-buttons-arc pointer-events-auto">
+      <button class="touch-btn action-brake" data-action="backward">
+        <span class="btn-icon-lbl">▼</span>
+        BRAKE
+      </button>
       <button class="touch-btn action-jump" data-action="jump">
         <span class="btn-icon-lbl">▲</span>
         JUMP
@@ -831,20 +837,6 @@
         <span class="btn-icon-lbl">⚡</span>
         THRUST
       </button>
-    </div>
-  </div>
-
-  <!-- Classic Console Layout Container -->
-  <div id="layout-classic-console" class="touch-layout-container hidden">
-    <div id="joystick-base" class="joystick-base pointer-events-auto">
-      <div id="joystick-knob" class="joystick-knob"></div>
-      <div class="joystick-guide-text">◀ STEER ▶</div>
-    </div>
-
-    <div class="right-buttons-classic pointer-events-auto">
-      <button class="touch-btn action-brake-classic" data-action="backward">BRAKE</button>
-      <button class="touch-btn action-throttle-classic" data-action="forward">THRUST</button>
-      <button class="touch-btn action-jump-classic" data-action="jump">JUMP</button>
     </div>
   </div>
 </div>

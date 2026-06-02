@@ -221,6 +221,9 @@ Defined in [preview.js](file:///c:/dev/Sky%20roads/preview.js).
 | `ship-color-picker` | `input[type="color"]` | `openShipPicker()`, `selectColorInPicker()` | Custom paint overlay picker color input wheel |
 | `btn-picker-select` | `button` | `setupUIListeners()` | Equips model + skin texture + accent overlay combination |
 | `btn-picker-back` | `button` | `setupUIListeners()` | Returns back to settings/menu without saving |
+| `mobile-touch-hud` | `div` | `GameManager.init()`, `resumeGame()` | Translucent overlay container holding touch input controls |
+| `joystick-base` | `div` | `setupTouchControlsDOMEvents()` | Circular bounding base tracking dragging coordinates |
+| `joystick-knob` | `div` | `setupTouchControlsDOMEvents()` | 2D clamped interactive analog stick knob |
 
 ---
 
@@ -239,6 +242,16 @@ Defined in [preview.js](file:///c:/dev/Sky%20roads/preview.js).
 | `.texture-option` | `background: rgba(255,255,255,0.02)`, `border-radius: 6px`, `cursor: pointer` | Option card container |
 | `.texture-option.active` | `border-color: var(--color-secondary)`, `box-shadow: active-glow` | Selected texture card glow highlight |
 | `.texture-preview` | `width: 100%`, `aspect-ratio: 1`, `background-size: cover` | Thumbnail graphic container for each texture |
+
+### Mobile HUD Styles
+
+| Selector | Properties | Purpose |
+|----------|------------|---------|
+| `.touch-hud-main-container` | `display: flex`, `justify-content: space-between`, `bottom: 160px` | Positions touch controls on side margins above cockpit dashboard |
+| `.joystick-base` | `width: 150px`, `height: 150px`, `border-radius: 50%` | Circular glassmorphic analog tracker backdrop |
+| `.joystick-knob` | `width: 74px`, `height: 74px`, concentric ridges | Concentric ridged PS2 style rubber thumbstick |
+| `.right-buttons-arc` | `width: 260px`, `height: 200px` | Curved positioning box for arced button sweep |
+| `.action-brake`, `.action-jump`, `.action-throttle` | `position: absolute`, circular buttons, neon glows | Ergonomic controls styled with custom interactive glows |
 
 ---
 

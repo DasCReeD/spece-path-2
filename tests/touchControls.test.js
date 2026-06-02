@@ -222,4 +222,77 @@ describe('KeyboardController - Touch Controls Integration', () => {
       window.currentLevelData = null; // Cleanup
     });
   });
+
+  // 7. Smart Lane-Snapping Magnetism
+  describe('Smart Lane-Snapping Magnetism in PhysicsEngine', () => {
+    let physics;
+    let levelInfo;
+
+    beforeEach(() => {
+      physics = new PhysicsEngine();
+      levelInfo = {
+        trackLength: 200,
+        gravity: 24.0,
+        collidables: [],
+        specialTiles: []
+      };
+      physics.onGround = true;
+      physics.isDead = false;
+      keyboard.touchControlsEnabled = true;
+      keyboard.setTouchSteerAmount(0); // Neutral stick input
+    });
+
+    it('should apply leftward snap velocity when ship is slightly to the right of a lane center (e.g. x = 0.4)', () => {
+      physics.position.x = 0.4; // Nearest lane is 0.0, displacement is -0.4
+      physics.velocity.x = 0;
+
+      physics.update(0.016, keyboard, levelInfo);
+
+      // targetSteerSpeed should be -0.4 * 4 = -1.6, pulling the velocity to negative
+      expect(physics.velocity.x).toBeLessThan(0);
+    });
+
+    it('should apply rightward snap velocity when ship is slightly to the left of a lane center (e.g. x = -0.4)', () => {
+      physics.position.x = -0.4; // Nearest lane is 0.0, displacement is +0.4
+      physics.velocity.x = 0;
+
+      physics.update(0.016, keyboard, levelInfo);
+
+      // targetSteerSpeed should be +0.4 * 4 = +1.6, pulling velocity to positive
+      expect(physics.velocity.x).toBeGreaterThan(0);
+    });
+
+    it('should snap towards nearest lane center when near another lane (e.g. x = 1.6 near lane 2.0)', () => {
+      physics.position.x = 1.6; // Nearest lane is 2.0, displacement is +0.4
+      physics.velocity.x = 0;
+
+      physics.update(0.016, keyboard, levelInfo);
+
+      expect(physics.velocity.x).toBeGreaterThan(0);
+    });
+
+    it('should NOT apply lane-snapping when player is actively steering (steerAmount is non-zero)', () => {
+      physics.position.x = 0.4; // Nearest lane is 0.0, snapping wants left (negative) velocity
+      physics.velocity.x = 0;
+
+      // Active steering rightward
+      keyboard.setTouchSteerAmount(0.5); // wants +5.0 lateral speed
+
+      physics.update(0.016, keyboard, levelInfo);
+
+      // Manual steering must override snapping magnetism
+      expect(physics.velocity.x).toBeGreaterThan(0);
+    });
+
+    it('should NOT apply lane-snapping when ship is airborne', () => {
+      physics.position.x = 0.4;
+      physics.velocity.x = 0;
+      physics.onGround = false; // Airborne
+
+      physics.update(0.016, keyboard, levelInfo);
+
+      // Standard neutral deceleration applies, no lane pull
+      expect(physics.velocity.x).toBe(0);
+    });
+  });
 });
