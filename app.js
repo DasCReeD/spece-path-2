@@ -462,6 +462,45 @@ class GameManager {
     }
   }
 
+  updateGamepadConfigUI() {
+    const GAMEPAD_BUTTON_NAMES = {
+      0: 'A (Button 0)',
+      1: 'B (Button 1)',
+      2: 'X (Button 2)',
+      3: 'Y (Button 3)',
+      4: 'LB (Button 4)',
+      5: 'RB (Button 5)',
+      6: 'LT (Button 6)',
+      7: 'RT (Button 7)',
+      8: 'View/Back (Button 8)',
+      9: 'Menu/Start (Button 9)',
+      10: 'LSB (Button 10)',
+      11: 'RSB (Button 11)',
+      12: 'D-Pad Up (Button 12)',
+      13: 'D-Pad Down (Button 13)',
+      14: 'D-Pad Left (Button 14)',
+      15: 'D-Pad Right (Button 15)',
+      16: 'Xbox/Guide (Button 16)'
+    };
+
+    const mappings = this.keyboard.gamepadMappings;
+    const actions = ['forward', 'backward', 'jump', 'left', 'right', 'cycleCamera', 'togglePause'];
+    
+    actions.forEach(action => {
+      const btn = document.getElementById(`btn-map-${action}`);
+      if (btn) {
+        const btnIndex = mappings[action];
+        if (btnIndex === undefined || btnIndex === null) {
+          btn.innerText = 'Not Mapped';
+        } else {
+          btn.innerText = GAMEPAD_BUTTON_NAMES[btnIndex] !== undefined ? GAMEPAD_BUTTON_NAMES[btnIndex] : `Button ${btnIndex}`;
+        }
+        btn.classList.remove('btn-danger'); // Remove listening visual cue if it was active
+        btn.classList.add('btn-glow');
+      }
+    });
+  }
+
   showCalibratorAlert() {
     const alertEl = document.getElementById('calibrator-status-alert');
     if (alertEl) {
@@ -869,6 +908,66 @@ class GameManager {
         this.openShipPicker();
       });
     }
+
+    const btnSettingsGamepad = document.getElementById('btn-settings-gamepad');
+    if (btnSettingsGamepad) {
+      btnSettingsGamepad.addEventListener('click', () => {
+        gameAudio.playClick();
+        this.gameState = 'gamepad_config';
+        this.updateGamepadConfigUI();
+        this.showScreen('gamepad-config-screen');
+      });
+    }
+
+    const btnGamepadClose = document.getElementById('btn-gamepad-close');
+    if (btnGamepadClose) {
+      btnGamepadClose.addEventListener('click', () => {
+        gameAudio.playClick();
+        this.gameState = 'settings';
+        this.showScreen('settings-screen');
+      });
+    }
+
+    const btnGamepadReset = document.getElementById('btn-gamepad-reset');
+    if (btnGamepadReset) {
+      btnGamepadReset.addEventListener('click', () => {
+        gameAudio.playClick();
+        this.keyboard.gamepadMappings = {
+          forward: 7,
+          backward: 6,
+          jump: 0,
+          left: 14,
+          right: 15,
+          cycleCamera: 3,
+          togglePause: 9
+        };
+        this.keyboard.saveGamepadMappings();
+        this.updateGamepadConfigUI();
+      });
+    }
+
+    // Set up button mapping listener completion callback
+    this.keyboard.onGamepadMapComplete = (action, btnIndex) => {
+      gameAudio.playClick();
+      this.updateGamepadConfigUI();
+    };
+
+    // Bind listeners to individual action map buttons
+    const gamepadActions = ['forward', 'backward', 'jump', 'left', 'right', 'cycleCamera', 'togglePause'];
+    gamepadActions.forEach(action => {
+      const btn = document.getElementById(`btn-map-${action}`);
+      if (btn) {
+        btn.addEventListener('click', () => {
+          gameAudio.playClick();
+          // Put the selected action into mapping state
+          this.keyboard.currentlyMappingAction = action;
+          // Clear text to show listening state
+          btn.innerText = '[ PRESS ANY BUTTON... ]';
+          btn.classList.remove('btn-glow');
+          btn.classList.add('btn-danger'); // red styling indicating recording
+        });
+      }
+    });
 
     // Advanced Physics Calibrator triggers
     const btnSettingsCalibrator = document.getElementById('btn-settings-calibrator');
@@ -1590,6 +1689,64 @@ class GameManager {
     const dt = (timestamp - this.lastTime) / 1000.0;
     this.lastTime = timestamp;
 
+    if (this.keyboard && typeof this.keyboard.pollGamepad === 'function') {
+      this.keyboard.pollGamepad();
+    }
+
+    if (this.keyboard && typeof this.keyboard.consumeTogglePause === 'function' && this.keyboard.consumeTogglePause()) {
+      if (this.gameState === 'playing') {
+        gameAudio.playClick();
+        this.pauseGame();
+      } else if (this.gameState === 'paused') {
+        gameAudio.playClick();
+        this.resumeGame();
+      }
+    }
+
+    // Process gamepad menu navigation when not actively playing a level
+    if (this.gameState !== 'playing' && this.keyboard && this.keyboard.gamepadConnected && !this.keyboard.currentlyMappingAction) {
+      const gp = this.keyboard.gamepad;
+      
+      if (gp.menuDown) {
+        this.handleMenuKeyboard({ code: 'ArrowDown', preventDefault: () => {} });
+      } else if (gp.menuUp) {
+        this.handleMenuKeyboard({ code: 'ArrowUp', preventDefault: () => {} });
+      } else if (gp.menuLeft) {
+        this.handleMenuKeyboard({ code: 'ArrowLeft', preventDefault: () => {} });
+      } else if (gp.menuRight) {
+        this.handleMenuKeyboard({ code: 'ArrowRight', preventDefault: () => {} });
+      }
+
+      if (gp.menuSelect) {
+        this.handleMenuKeyboard({ code: 'Enter', preventDefault: () => {} });
+      }
+
+      if (gp.menuCancel) {
+        const activeScreen = document.querySelector('.overlay-screen.active');
+        if (activeScreen) {
+          const cancelButtons = {
+            'settings-screen': 'btn-settings-close',
+            'gamepad-config-screen': 'btn-gamepad-close',
+            'level-screen': 'btn-level-back',
+            'ship-picker-screen': 'btn-picker-back',
+            'how-to-screen': 'btn-how-to-back',
+            'death-screen': 'btn-death-menu',
+            'success-screen': 'btn-success-menu',
+            'pause-screen': 'btn-pause-resume'
+          };
+          
+          const btnId = cancelButtons[activeScreen.id];
+          if (btnId) {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+              gameAudio.playClick();
+              btn.click();
+            }
+          }
+        }
+      }
+    }
+
     if (this.gameState === 'paused') {
       this.animationFrameId = requestAnimationFrame((t) => this.animate(t));
       return;
@@ -1597,6 +1754,11 @@ class GameManager {
 
     if (this.gameState === 'playing' || this.gameState === 'death') {
       if (this.gameState === 'playing') {
+        if (this.keyboard && typeof this.keyboard.consumeCycleCamera === 'function' && this.keyboard.consumeCycleCamera()) {
+          gameAudio.playClick();
+          this.graphics.toggleCameraMode();
+        }
+
         // 1. Advance Physics Engine (DT capped internally to prevent tunneling)
         this.physics.update(dt, this.keyboard, this.levelInfo);
 

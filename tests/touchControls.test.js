@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { KeyboardController, PhysicsEngine } from '../physics.js';
 
 describe('KeyboardController - Touch Controls Integration', () => {
@@ -7,6 +7,10 @@ describe('KeyboardController - Touch Controls Integration', () => {
   beforeEach(() => {
     keyboard = new KeyboardController();
     keyboard.touchControlsEnabled = true;
+  });
+
+  afterEach(() => {
+    window.currentLevelData = null;
   });
 
   // 1. Initial State
@@ -188,7 +192,7 @@ describe('KeyboardController - Touch Controls Integration', () => {
       };
 
       // Set keyboard spacePressed = true (holding jump)
-      keyboard.spacePressed = true;
+      keyboard.keys.jump = true;
       keyboard.jump = false; // jump triggered on keydown is false
 
       physics.update(0.016, keyboard, levelInfo);
@@ -197,8 +201,6 @@ describe('KeyboardController - Touch Controls Integration', () => {
       expect(physics.isRebounding).toBe(false);
       expect(physics.onGround).toBe(true); // Treated as normal solid landing
       expect(physics.velocity.y).toBe(0.0); // Reset to 0 on landing
-
-      window.currentLevelData = null; // Cleanup
     });
 
     it('should trigger rebound when jump key is NOT held down', () => {
@@ -210,7 +212,7 @@ describe('KeyboardController - Touch Controls Integration', () => {
         rows: Array.from({ length: 100 }, () => [{}, {}, {}, {}, {}, {}, {}])
       };
 
-      keyboard.spacePressed = false;
+      keyboard.keys.jump = false;
 
       physics.update(0.016, keyboard, levelInfo);
 
@@ -218,8 +220,6 @@ describe('KeyboardController - Touch Controls Integration', () => {
       expect(physics.isRebounding).toBe(true);
       expect(physics.onGround).toBe(false);
       expect(physics.velocity.y).toBe(4.2); // Rebound impulse
-
-      window.currentLevelData = null; // Cleanup
     });
   });
 

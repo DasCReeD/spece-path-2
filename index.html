@@ -298,6 +298,10 @@
           <span style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700; color: #8c8f99; text-shadow: 0 0 5px rgba(140,143,153,0.3);">BOAT THROTTLE</span>
           <button id="btn-settings-boat-throttle" class="btn btn-info btn-glow" style="margin: 0; min-width: 150px; font-size: 0.75rem; padding: 8px 12px;">BOAT: OFF</button>
         </div>
+        <div class="settings-control-row" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700; color: #8c8f99; text-shadow: 0 0 5px rgba(140,143,153,0.3);">GAMEPAD</span>
+          <button id="btn-settings-gamepad" class="btn btn-info btn-glow" style="margin: 0; min-width: 150px; font-size: 0.75rem; padding: 8px 12px;">CONFIGURE 🎮</button>
+        </div>
         <div class="settings-control-row" style="margin-top: 10px; width: 100%;">
           <button id="btn-settings-picker" class="btn btn-secondary btn-glow" style="width: 100%; font-size: 0.8rem; padding: 10px 15px; margin: 0;">SPACESHIP GARAGE</button>
         </div>
@@ -308,6 +312,58 @@
       
       <div class="menu-buttons" style="margin-top: 25px;">
         <button id="btn-settings-close" class="btn btn-primary btn-glow">CLOSE</button>
+      </div>
+    </div>
+
+    <!-- GAMEPAD MAPPING CONFIGURATION OVERLAY -->
+    <div id="gamepad-config-screen" class="overlay-screen hidden glass-card status-card">
+      <h2 class="status-title text-glow">GAMEPAD CONFIG</h2>
+      
+      <div class="settings-options" style="display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 340px; margin: 0 auto;">
+        
+        <div class="settings-control-row" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700; color: #8c8f99;">ACCELERATE</span>
+          <button id="btn-map-forward" class="btn btn-info btn-glow" style="margin: 0; min-width: 170px; font-size: 0.75rem; padding: 8px 12px;">RT (Button 7)</button>
+        </div>
+
+        <div class="settings-control-row" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700; color: #8c8f99;">BRAKE</span>
+          <button id="btn-map-backward" class="btn btn-info btn-glow" style="margin: 0; min-width: 170px; font-size: 0.75rem; padding: 8px 12px;">LT (Button 6)</button>
+        </div>
+
+        <div class="settings-control-row" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700; color: #8c8f99;">JUMP</span>
+          <button id="btn-map-jump" class="btn btn-info btn-glow" style="margin: 0; min-width: 170px; font-size: 0.75rem; padding: 8px 12px;">A (Button 0)</button>
+        </div>
+
+        <div class="settings-control-row" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700; color: #8c8f99;">STEER LEFT</span>
+          <button id="btn-map-left" class="btn btn-info btn-glow" style="margin: 0; min-width: 170px; font-size: 0.75rem; padding: 8px 12px;">D-Pad L (Button 14)</button>
+        </div>
+
+        <div class="settings-control-row" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700; color: #8c8f99;">STEER RIGHT</span>
+          <button id="btn-map-right" class="btn btn-info btn-glow" style="margin: 0; min-width: 170px; font-size: 0.75rem; padding: 8px 12px;">D-Pad R (Button 15)</button>
+        </div>
+
+        <div class="settings-control-row" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700; color: #8c8f99;">CYCLE CAMERA</span>
+          <button id="btn-map-cycleCamera" class="btn btn-info btn-glow" style="margin: 0; min-width: 170px; font-size: 0.75rem; padding: 8px 12px;">Y (Button 3)</button>
+        </div>
+
+        <div class="settings-control-row" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <span style="font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700; color: #8c8f99;">PAUSE GAME</span>
+          <button id="btn-map-togglePause" class="btn btn-info btn-glow" style="margin: 0; min-width: 170px; font-size: 0.75rem; padding: 8px 12px;">Start (Button 9)</button>
+        </div>
+
+        <div class="settings-control-row" style="margin-top: 10px; width: 100%;">
+          <button id="btn-gamepad-reset" class="btn btn-secondary btn-glow" style="width: 100%; font-size: 0.8rem; padding: 10px 15px; margin: 0;">RESET TO DEFAULT</button>
+        </div>
+
+      </div>
+
+      <div class="menu-buttons" style="margin-top: 25px;">
+        <button id="btn-gamepad-close" class="btn btn-primary btn-glow">BACK</button>
       </div>
     </div>
 

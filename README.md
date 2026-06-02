@@ -1,7 +1,7 @@
 🌌 SkyRoads Modern WebGL Remake
 ===============================
 
-[![Tests](https://img.shields.io/badge/tests-424%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-455%20passed-brightgreen.svg)](#testing)
 [![Tech Stack](https://img.shields.io/badge/tech--stack-Vite%20%7C%20Three.js%20%7C%20Web%20Audio-blueviolet.svg)](#architecture)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 
@@ -38,13 +38,13 @@ Get the game running locally in under a minute.
 | **Development** | `npm run dev` | Spins up the Vite dev server with Hot Module Replacement (HMR) at `http://localhost:3000`. |
 | **Production Build** | `npm run build` | Bundles and minifies the application using `esbuild` into the `dist/` directory. |
 | **Preview Build** | `npm run preview` | Serves the locally compiled production bundle from `dist/` for performance testing. |
-| **Run Tests** | `npm run test` | Executes the complete test suite of **424 unit tests** using **Vitest**. |
+| **Run Tests** | `npm run test` | Executes the complete test suite of **455 unit tests** using **Vitest**. |
 
 ---
 
 ## 🕹️ Gameplay Controls
 
-Control your spacecraft with high precision using the keyboard or mouse.
+Control your spacecraft with high precision using the keyboard, mouse, or an Xbox controller.
 
 ### ✈️ Flight Controls
 * **Accelerate:** `W` or `ArrowUp` (increases forward speed)
@@ -53,6 +53,19 @@ Control your spacecraft with high precision using the keyboard or mouse.
 * **Steer Right:** `D` or `ArrowRight` (moves lateral position right)
 * **Jump:** `Space` (initiates thruster leap over gaps and obstacles)
 * **Mouse Flight Toggle:** Click the **MOUSE PLAY: ON/OFF** button in the main menu to steer and accelerate the ship using cursor movement.
+
+### 🎮 Xbox Gamepad / Controller Controls
+* **Accelerate:** `Right Trigger (RT)` (Default Button 7)
+* **Brake:** `Left Trigger (LT)` (Default Button 6)
+* **Jump:** `A Button` (Default Button 0)
+* **Steer Left/Right:** D-pad Left/Right or Left Analog Stick (with 15% stick deadzone filtering)
+* **Cycle Camera:** `Y Button` (Default Button 3)
+* **Pause / Resume Game:** `Start Button` (Default Button 9)
+* **Menu Navigation**:
+  * Navigate options using D-pad or Left Analog Stick.
+  * Select/Click option with `A Button` (Button 0).
+  * Go Back/Cancel/Exit screen with `B Button` (Button 1).
+* **Customize Mappings**: Open Settings, click **CONFIGURE 🎮**, select an action, and press any button on your gamepad to bind it. Custom mappings are persisted automatically to `localStorage`.
 
 ### 🎥 Camera Viewport Adjustments
 * **Toggle Camera Mode (`C`):** Swaps between default smooth chase cam, closer cockpit view, and higher cinematic tracking perspectives.
@@ -184,7 +197,7 @@ The codebase is built and maintained following strict engineering rules to guara
 *   Input validations at all boundaries protect against undefined keyboard events and runtime property lookups.
 
 ### 🧪 Test-Driven Development (TDD)
-*   A robust test suite of **424 unit tests** covers every module (`physics`, `graphics`, `levelLoader`, `app`, `audio`, `cockpitConsole`, and `preview`).
+*   A robust test suite of **455 unit tests** covers every module (`physics`, `graphics`, `levelLoader`, `app`, `audio`, `cockpitConsole`, and `preview`).
 *   Mocking is strictly implemented for browser APIs (like Three.js components and AudioContexts) using Vitest and jsdom.
 *   Tests are deterministic, independent, and focus on validating functionality and robust edge-case handling.
 

@@ -120,6 +120,11 @@ export class PhysicsEngine {
     if (this.isDead) return;
     dt = Math.min(dt, 0.05); // Cap timestep to prevent tunneling
 
+    // Poll and update keyboard/gamepad combined state on every physics frame tick
+    if (keyboard && typeof keyboard.updateCombinedState === 'function') {
+      keyboard.updateCombinedState();
+    }
+
     // Synchronize customizable settings properties with active instance variables
     this.maxSpeedNormal = this.settings.maxSpeedNormal !== undefined ? this.settings.maxSpeedNormal : 32.0;
     this.maxSpeedBoost = this.settings.maxSpeedBoost !== undefined ? this.settings.maxSpeedBoost : 60.0;
@@ -623,6 +628,46 @@ export class KeyboardController {
     this.mouseControlsEnabled = false;
     this.touchControlsEnabled = false;
 
+    this.gamepadConnected = false;
+    this.gamepad = {
+      forward: false,
+      backward: false,
+      left: false,
+      right: false,
+      jump: false,
+      steerAmount: 0,
+      cycleCameraPressed: false,
+      togglePausePressed: false,
+      menuUp: false,
+      menuDown: false,
+      menuLeft: false,
+      menuRight: false,
+      menuSelect: false,
+      menuCancel: false
+    };
+
+    this.gamepadMappings = {
+      forward: 7,       // RT (Right Trigger)
+      backward: 6,      // LT (Left Trigger)
+      jump: 0,          // A button
+      left: 14,         // D-pad Left
+      right: 15,        // D-pad Right
+      cycleCamera: 3,   // Y button
+      togglePause: 9    // Start button
+    };
+
+    this.prevGamepadButtons = {};
+    this.prevMenuDirections = {
+      up: false,
+      down: false,
+      left: false,
+      right: false
+    };
+    this.currentlyMappingAction = null;
+    this.onGamepadMapComplete = null;
+
+    this.loadGamepadMappings();
+
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', (e) => this.handleKey(e, true));
       window.addEventListener('keyup', (e) => this.handleKey(e, false));
@@ -634,6 +679,13 @@ export class KeyboardController {
         if (this.mouseControlsEnabled) {
           e.preventDefault();
         }
+      });
+
+      window.addEventListener('gamepadconnected', () => {
+        this.gamepadConnected = true;
+      });
+      window.addEventListener('gamepaddisconnected', () => {
+        this.gamepadConnected = false;
       });
     }
   }
@@ -721,12 +773,200 @@ export class KeyboardController {
   }
 
   updateCombinedState() {
-    this.forward = this.keys.forward || (this.mouseControlsEnabled && this.mouse.forward) || (this.touchControlsEnabled && this.touch.forward);
-    this.backward = this.keys.backward || (this.touchControlsEnabled && this.touch.backward);
-    this.left = this.keys.left || (this.mouseControlsEnabled && this.mouse.left) || (this.touchControlsEnabled && this.touch.left);
-    this.right = this.keys.right || (this.mouseControlsEnabled && this.mouse.right) || (this.touchControlsEnabled && this.touch.right);
-    this.jump = this.keys.jump || (this.mouseControlsEnabled && this.mouse.jump) || (this.touchControlsEnabled && this.touch.jump);
-    this.spacePressed = this.keys.jump || (this.mouseControlsEnabled && this.mouse.jump) || (this.touchControlsEnabled && this.touch.jump);
+    this.pollGamepad();
+
+    this.forward = this.keys.forward || (this.mouseControlsEnabled && this.mouse.forward) || (this.touchControlsEnabled && this.touch.forward) || this.gamepad.forward;
+    this.backward = this.keys.backward || (this.touchControlsEnabled && this.touch.backward) || this.gamepad.backward;
+    this.left = this.keys.left || (this.mouseControlsEnabled && this.mouse.left) || (this.touchControlsEnabled && this.touch.left) || this.gamepad.left;
+    this.right = this.keys.right || (this.mouseControlsEnabled && this.mouse.right) || (this.touchControlsEnabled && this.touch.right) || this.gamepad.right;
+    this.jump = this.keys.jump || (this.mouseControlsEnabled && this.mouse.jump) || (this.touchControlsEnabled && this.touch.jump) || this.gamepad.jump;
+    this.spacePressed = this.keys.jump || (this.mouseControlsEnabled && this.mouse.jump) || (this.touchControlsEnabled && this.touch.jump) || this.gamepad.jump;
+
+    // Steer Amount: prioritize analog gamepad stick, then touch/mouse steer amount
+    if (this.gamepadConnected && this.gamepad.steerAmount !== 0) {
+      this.steerAmount = this.gamepad.steerAmount;
+    } else if (this.mouseControlsEnabled || this.touchControlsEnabled) {
+      // Keep mouse/touch steerAmount if active
+    } else {
+      this.steerAmount = 0;
+    }
+  }
+
+  loadGamepadMappings() {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('skyroads_gamepad_mappings');
+      if (saved) {
+        try {
+          this.gamepadMappings = { ...this.gamepadMappings, ...JSON.parse(saved) };
+        } catch (e) {
+          // Fallback to default
+        }
+      }
+    }
+  }
+
+  saveGamepadMappings() {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('skyroads_gamepad_mappings', JSON.stringify(this.gamepadMappings));
+    }
+  }
+
+  _isGamepadPressed(gp, btnIndex) {
+    if (btnIndex === null || btnIndex === undefined) return false;
+    const btn = gp.buttons[btnIndex];
+    return btn ? btn.pressed : false;
+  }
+
+  _detectGamepadJustPressed(gp, btnIndex, actionKey) {
+    if (btnIndex === null || btnIndex === undefined) return false;
+    const btn = gp.buttons[btnIndex];
+    const pressed = btn ? btn.pressed : false;
+    const prevPressed = this.prevGamepadButtons[actionKey] || false;
+    this.prevGamepadButtons[actionKey] = pressed;
+    return pressed && !prevPressed;
+  }
+
+  _detectMenuDirectionPress(dirKey, isPressedNow) {
+    const prevPressed = this.prevMenuDirections[dirKey] || false;
+    this.prevMenuDirections[dirKey] = isPressedNow;
+    return isPressedNow && !prevPressed;
+  }
+
+  pollGamepad() {
+    if (typeof navigator === 'undefined' || !navigator.getGamepads) {
+      this.gamepadConnected = false;
+      return;
+    }
+
+    const gamepads = navigator.getGamepads();
+    let gp = null;
+    for (let i = 0; i < gamepads.length; i++) {
+      if (gamepads[i]) {
+        gp = gamepads[i];
+        break;
+      }
+    }
+
+    if (!gp) {
+      this.gamepadConnected = false;
+      this.gamepad.forward = false;
+      this.gamepad.backward = false;
+      this.gamepad.left = false;
+      this.gamepad.right = false;
+      this.gamepad.jump = false;
+      this.gamepad.steerAmount = 0;
+      this.gamepad.cycleCameraPressed = false;
+      this.gamepad.togglePausePressed = false;
+      this.gamepad.menuUp = false;
+      this.gamepad.menuDown = false;
+      this.gamepad.menuLeft = false;
+      this.gamepad.menuRight = false;
+      this.gamepad.menuSelect = false;
+      this.gamepad.menuCancel = false;
+      this.prevMenuDirections.up = false;
+      this.prevMenuDirections.down = false;
+      this.prevMenuDirections.left = false;
+      this.prevMenuDirections.right = false;
+      return;
+    }
+
+    this.gamepadConnected = true;
+
+    // If currently mapping a button, listen for any pressed button
+    if (this.currentlyMappingAction) {
+      for (let b = 0; b < gp.buttons.length; b++) {
+        if (gp.buttons[b].pressed) {
+          const action = this.currentlyMappingAction;
+          this.gamepadMappings[action] = b;
+          this.saveGamepadMappings();
+          this.currentlyMappingAction = null;
+          
+          if (typeof this.onGamepadMapComplete === 'function') {
+            this.onGamepadMapComplete(action, b);
+          }
+          break;
+        }
+      }
+      return;
+    }
+
+    // Read action states
+    this.gamepad.forward = this._isGamepadPressed(gp, this.gamepadMappings.forward);
+    this.gamepad.backward = this._isGamepadPressed(gp, this.gamepadMappings.backward);
+    this.gamepad.jump = this._isGamepadPressed(gp, this.gamepadMappings.jump);
+
+    const steerLeftVal = this._isGamepadPressed(gp, this.gamepadMappings.left);
+    const steerRightVal = this._isGamepadPressed(gp, this.gamepadMappings.right);
+
+    // Left stick X axis analog steering
+    if (gp.axes && gp.axes.length > 0) {
+      const steerAxis = gp.axes[0];
+      const deadzone = 0.15;
+      if (Math.abs(steerAxis) > deadzone) {
+        this.gamepad.steerAmount = steerAxis;
+        this.gamepad.left = steerAxis < 0;
+        this.gamepad.right = steerAxis > 0;
+      } else {
+        this.gamepad.steerAmount = 0;
+        this.gamepad.left = steerLeftVal;
+        this.gamepad.right = steerRightVal;
+      }
+    } else {
+      this.gamepad.steerAmount = 0;
+      this.gamepad.left = steerLeftVal;
+      this.gamepad.right = steerRightVal;
+    }
+
+    this.gamepad.cycleCameraPressed = this._detectGamepadJustPressed(gp, this.gamepadMappings.cycleCamera, 'cycleCamera');
+    this.gamepad.togglePausePressed = this._detectGamepadJustPressed(gp, this.gamepadMappings.togglePause, 'togglePause');
+
+    // Menu Navigation Directions & Buttons
+    let stickUp = false;
+    let stickDown = false;
+    let stickLeft = false;
+    let stickRight = false;
+
+    if (gp.axes && gp.axes.length > 1) {
+      const stickX = gp.axes[0];
+      const stickY = gp.axes[1];
+      const stickThreshold = 0.5;
+      
+      stickUp = stickY < -stickThreshold;
+      stickDown = stickY > stickThreshold;
+      stickLeft = stickX < -stickThreshold;
+      stickRight = stickX > stickThreshold;
+    }
+
+    // Combined menu directions (D-pad or Left Stick)
+    const dirUp = this._isGamepadPressed(gp, 12) || stickUp;
+    const dirDown = this._isGamepadPressed(gp, 13) || stickDown;
+    const dirLeft = this._isGamepadPressed(gp, 14) || stickLeft;
+    const dirRight = this._isGamepadPressed(gp, 15) || stickRight;
+
+    this.gamepad.menuUp = this._detectMenuDirectionPress('up', dirUp);
+    this.gamepad.menuDown = this._detectMenuDirectionPress('down', dirDown);
+    this.gamepad.menuLeft = this._detectMenuDirectionPress('left', dirLeft);
+    this.gamepad.menuRight = this._detectMenuDirectionPress('right', dirRight);
+
+    // Menu Select (A button) & Cancel (B button) transitions
+    this.gamepad.menuSelect = this._detectGamepadJustPressed(gp, 0, 'menuSelect');
+    this.gamepad.menuCancel = this._detectGamepadJustPressed(gp, 1, 'menuCancel');
+  }
+
+  consumeCycleCamera() {
+    if (this.gamepad.cycleCameraPressed) {
+      this.gamepad.cycleCameraPressed = false;
+      return true;
+    }
+    return false;
+  }
+
+  consumeTogglePause() {
+    if (this.gamepad.togglePausePressed) {
+      this.gamepad.togglePausePressed = false;
+      return true;
+    }
+    return false;
   }
 
   resetJump() {
