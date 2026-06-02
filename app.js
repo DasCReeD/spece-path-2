@@ -65,7 +65,28 @@ class GameManager {
   }
 
   init() {
-    // 1. Initialize Visual Viewport
+    // Load persisted model, skin texture, and custom color overlay preferences FIRST
+    this.selectedModel = localStorage.getItem('skyroads_selected_model') || 'original';
+    
+    let savedSkin = localStorage.getItem('skyroads_selected_skin');
+    let savedColor = localStorage.getItem('skyroads_selected_color');
+
+    // Migration of legacy hex values inside skyroads_selected_skin
+    if (savedSkin && savedSkin.startsWith('#')) {
+      savedColor = savedSkin;
+      savedSkin = 'default';
+      localStorage.setItem('skyroads_selected_skin', 'default');
+      localStorage.setItem('skyroads_selected_color', savedColor);
+    }
+
+    this.selectedSkin = savedSkin || 'default';
+    this.selectedColor = savedColor || '#ffffff';
+
+    this.graphics.currentModelName = this.selectedModel;
+    this.graphics.currentSkinName = this.selectedSkin;
+    this.graphics.currentSkinColor = this.selectedColor;
+
+    // 1. Initialize Visual Viewport (will create shipMesh using the loaded model preferences directly)
     const container = document.getElementById('canvas-container');
     this.graphics.init(container);
 
@@ -98,6 +119,7 @@ class GameManager {
     const savedSoundMode = localStorage.getItem('skyroads_sound_mode') || 'synth';
     gameAudio.setSoundMode(savedSoundMode);
     this.updateSoundModeToggleBtn();
+    this.updateNextTrackBtnText();
 
     // Load persisted music and SFX volume levels
     const savedMusicVolume = localStorage.getItem('skyroads_music_volume');
@@ -116,32 +138,6 @@ class GameManager {
     const sliderSfxVolume = document.getElementById('slider-settings-sfx-volume');
     if (sliderSfxVolume) {
       sliderSfxVolume.value = Math.round(sfxVol * 100);
-    }
-
-    // Load persisted model, skin texture, and custom color overlay preferences
-    this.selectedModel = localStorage.getItem('skyroads_selected_model') || 'original';
-    
-    let savedSkin = localStorage.getItem('skyroads_selected_skin');
-    let savedColor = localStorage.getItem('skyroads_selected_color');
-
-    // Migration of legacy hex values inside skyroads_selected_skin
-    if (savedSkin && savedSkin.startsWith('#')) {
-      savedColor = savedSkin;
-      savedSkin = 'default';
-      localStorage.setItem('skyroads_selected_skin', 'default');
-      localStorage.setItem('skyroads_selected_color', savedColor);
-    }
-
-    this.selectedSkin = savedSkin || 'default';
-    this.selectedColor = savedColor || '#ffffff';
-
-    this.graphics.currentModelName = this.selectedModel;
-    this.graphics.currentSkinName = this.selectedSkin;
-    this.graphics.currentSkinColor = this.selectedColor;
-
-    // Dynamically load the user's custom ship at startup!
-    if (this.selectedModel !== 'original' || this.selectedSkin !== 'default' || this.selectedColor !== '#ffffff') {
-      this.graphics.changeShipModel(this.selectedModel, this.selectedSkin, this.selectedColor);
     }
 
     // Initialize tunable physics preset profiles by loading from localStorage or falling back to defaults
@@ -368,6 +364,13 @@ class GameManager {
       btn.classList.remove('btn-info');
       btn.classList.add('btn-secondary');
     }
+  }
+
+  updateNextTrackBtnText() {
+    const btn = document.getElementById('btn-settings-next-track');
+    if (!btn) return;
+    const trackName = gameAudio.getCurrentTrackName();
+    btn.innerText = `TRACK: ${trackName} ⏭️`;
   }
 
   openShipPicker() {
@@ -798,6 +801,16 @@ class GameManager {
         gameAudio.setSoundMode(nextMode);
         localStorage.setItem('skyroads_sound_mode', nextMode);
         this.updateSoundModeToggleBtn();
+        this.updateNextTrackBtnText();
+      });
+    }
+
+    const btnSettingsNextTrack = document.getElementById('btn-settings-next-track');
+    if (btnSettingsNextTrack) {
+      btnSettingsNextTrack.addEventListener('click', () => {
+        gameAudio.playClick();
+        gameAudio.nextTrack();
+        this.updateNextTrackBtnText();
       });
     }
 
@@ -1475,6 +1488,7 @@ class GameManager {
       gameAudio.stopEngine();
       this.preSettingsState = this.gameState;
       this.gameState = 'settings';
+      this.updateNextTrackBtnText();
       
       // Update Settings popup overlay controls visibility based on gameplay state
       const pausedActions = document.getElementById('settings-paused-actions');
@@ -1769,7 +1783,6 @@ class GameManager {
     if (this.gameState === 'death') return;
     this.gameState = 'death';
     gameAudio.stopEngine();
-    gameAudio.stopMusic();
     gameAudio.playExplosion();
     this.graphics.triggerExplosion(this.physics.position);
 

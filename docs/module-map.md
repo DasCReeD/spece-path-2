@@ -167,7 +167,7 @@ Defined in [preview.js](file:///c:/dev/Sky%20roads/preview.js).
 
 ## physics.js — Physics Engine & Input
 
-**File:** [physics.js](file:///c:/dev/Sky%20roads/physics.js) · ~579 lines · ~24 KB
+**File:** [physics.js](file:///c:/dev/Sky%20roads/physics.js) · ~729 lines · ~27 KB
 
 ### Imports
 
@@ -183,17 +183,52 @@ Defined in [preview.js](file:///c:/dev/Sky%20roads/preview.js).
 | `TILE_WIDTH` | `const number` | `2.0` — world units per tile width |
 | `TILE_LENGTH` | `const number` | `4.0` — world units per tile depth |
 | `TOTAL_ROAD_WIDTH` | `const number` | `14.0` — total road width (`7 × 2.0`) |
-| `SHIP_WIDTH` | `const number` | `1.0` — ship bounding box width |
+| `SHIP_WIDTH` | `const number` | `0.6` — ship bounding box width |
 | `SHIP_HEIGHT` | `const number` | `0.4` — ship bounding box height |
 | `SHIP_LENGTH` | `const number` | `1.8` — ship bounding box length |
 | `PhysicsEngine` | `class` | Core physics simulation |
 | `KeyboardController` | `class` | Keyboard input state manager |
 
+### Class: `PhysicsEngine`
+
+#### Key Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| [update](file:///c:/dev/Sky%20roads/physics.js#L119) | `update(dt: number, keyboard: object, levelInfo: object): void` | Simulates engine speed, fuel/oxygen depletion, terrain special effects, inputs, coyote-time jumps, ground and wall collisions, sloped ramp height interpolation, side collisions on ramps, and tunnel transition collision overrides |
+
 ---
 
 ## levelLoader.js — Level Geometry Builder
 
-**File:** [levelLoader.js](file:///c:/dev/Sky%20roads/levelLoader.js) · ~955 lines · ~35 KB
+**File:** [levelLoader.js](file:///c:/dev/Sky%20roads/levelLoader.js) · ~1,404 lines · ~52 KB
+
+### Imports
+
+| Symbol | Source |
+|--------|--------|
+| `* as THREE` | `three` (npm) |
+
+### Exports
+
+| Symbol | Type | Description |
+|--------|------|-------------|
+| `TILE_WIDTH` | `const number` | `2.0` — tile width |
+| `TILE_LENGTH` | `const number` | `4.0` — tile length |
+| `ROAD_WIDTH_LANES` | `const number` | `7` — road width in lanes |
+| `TOTAL_ROAD_WIDTH` | `const number` | `14.0` — total road width |
+| `THEMES` | `const array` | List of texture configurations for each skin theme |
+| `getActiveThemeIndex` | `function` | Determines the theme index from level meta |
+| `buildLevel` | `function` | Synchronous geometry generator and level compiler |
+| `buildLevelAsync` | `function` | Asynchronous parser loading levels incrementally with worker/tick scheduling |
+
+### Key Helper Functions (Internal)
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `preprocessLevelRamps` | `preprocessLevelRamps(levelData: object): void` | Pre-scans level rows, auto-generating and injecting `ramp: true` tiles immediately preceding elevated tunnels |
+| `createRampGeometry` | `createRampGeometry(w: number, l: number, yBottom: number, y1: number, y2: number): THREE.BufferGeometry` | Generates a 3D triangular wedge geometry with customized UV maps mapping textures seamlessly on vertical and sloped faces |
+| `processTile` | `processTile(tile: object, r: number, c: number, ...): void` | Instantiates meshes, binds textures, compiles bounding boxes, and registers collidables/obstacles (including specialized ramp block configurations) |
 
 ---
 

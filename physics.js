@@ -322,6 +322,51 @@ export class PhysicsEngine {
 
     // Check collisions with all level collidables
     for (const block of levelInfo.collidables) {
+      if (block.isRamp) {
+        // Calculate ramp height at current ship Z position
+        const t = (this.position.z - block.maxZ) / (block.minZ - block.maxZ);
+        const clampedT = Math.max(0, Math.min(1, t));
+        const rampHeight = block.startY + clampedT * (block.endY - block.startY);
+
+        const xOverlap = shipBox.maxX > block.minX && shipBox.minX < block.maxX;
+        const zOverlap = shipBox.maxZ > block.minZ && shipBox.minZ < block.maxZ;
+
+        if (xOverlap && zOverlap) {
+          // Side collision check: slide along it if steering in from other lanes while too low
+          const blockCenterX = (block.minX + block.maxX) / 2;
+          const isSideCollision = Math.abs(this.position.x - blockCenterX) > 0.35;
+
+          let isSideHit = false;
+          if (isSideCollision && this.position.y < rampHeight - 0.1) {
+            const halfW = SHIP_WIDTH / 2;
+            const shipCenterX = this.position.x;
+            const blockCenterX = (block.minX + block.maxX) / 2;
+            if (shipCenterX > blockCenterX) {
+              this.position.x = block.maxX + halfW + 0.01;
+            } else {
+              this.position.x = block.minX - halfW - 0.01;
+            }
+            this.velocity.x = 0;
+            this.triggerWallCollisionAudio = true;
+            shipBox.minX = this.position.x - halfW;
+            shipBox.maxX = this.position.x + halfW;
+            isSideHit = true;
+          }
+
+          // Only snap and ride on the ramp if we did not hit its side
+          if (!isSideHit) {
+            const aboveRamp = this.position.y <= rampHeight + 0.35;
+            if (this.velocity.y <= 0 && aboveRamp) {
+              this.position.y = rampHeight;
+              this.groundHeight = rampHeight;
+              this.onGround = true;
+              this.velocity.y = 0;
+            }
+          }
+        }
+        continue; // Skip standard block collision checks for ramp blocks
+      }
+
       // Check if Z and X intersect
       const xOverlap = shipBox.maxX > block.minX && shipBox.minX < block.maxX;
       const zOverlap = shipBox.maxZ > block.minZ && shipBox.minZ < block.maxZ;
@@ -343,24 +388,36 @@ export class PhysicsEngine {
             const isSideCollision = (shipBox.maxZ <= block.maxZ + 0.15) || (overlapX < 0.35 && overlapZ > 0.5);
 
             if (!isSideCollision) {
-              if (this.difficulty === 'easy') {
-                // Bounce back instead of dying!
-                this.velocity.z = this.settings.easyCollisionBounceVel !== undefined ? this.settings.easyCollisionBounceVel : 10.0; // Positive Z is backward
-                this.position.z += this.settings.easyCollisionBounceDist !== undefined ? this.settings.easyCollisionBounceDist : 1.2; // Push back to clear block bounding box
-                this.triggerWallCollisionAudio = true; // Scrape/scrape wall audio as bounce indicator
-                this.velocity.x = 0;
-                
-                // Update the ship's bounding box
-                const halfW = SHIP_WIDTH / 2;
-                const halfL = SHIP_LENGTH / 2;
-                shipBox.minZ = this.position.z - halfL;
-                shipBox.maxZ = this.position.z + halfL;
-              } else {
-                // Front collision -> Crash!
-                this.isDead = true;
-                this.deathReason = 'COLLIDED WITH BLOCK';
-                this.velocity.set(0, 0, 0);
-                return;
+              const isPrecededByRamp = levelInfo.collidables.some(other => 
+                other.isRamp && 
+                Math.abs(other.minX - block.minX) < 0.1 && 
+                Math.abs(other.maxX - block.maxX) < 0.1 && 
+                Math.abs(other.minZ - block.maxZ) < 0.1
+              );
+              const isOnRamp = isPrecededByRamp && 
+                this.position.x > block.minX && this.position.x < block.maxX &&
+                this.position.z >= block.maxZ && this.position.z <= block.maxZ + TILE_LENGTH + 0.1;
+
+              if (!isOnRamp) {
+                if (this.difficulty === 'easy') {
+                  // Bounce back instead of dying!
+                  this.velocity.z = this.settings.easyCollisionBounceVel !== undefined ? this.settings.easyCollisionBounceVel : 10.0; // Positive Z is backward
+                  this.position.z += this.settings.easyCollisionBounceDist !== undefined ? this.settings.easyCollisionBounceDist : 1.2; // Push back to clear block bounding box
+                  this.triggerWallCollisionAudio = true; // Scrape/scrape wall audio as bounce indicator
+                  this.velocity.x = 0;
+                  
+                  // Update the ship's bounding box
+                  const halfW = SHIP_WIDTH / 2;
+                  const halfL = SHIP_LENGTH / 2;
+                  shipBox.minZ = this.position.z - halfL;
+                  shipBox.maxZ = this.position.z + halfL;
+                } else {
+                  // Front collision -> Crash!
+                  this.isDead = true;
+                  this.deathReason = 'COLLIDED WITH BLOCK';
+                  this.velocity.set(0, 0, 0);
+                  return;
+                }
               }
             } else {
               // Side wall collision -> Push ship out of the block and slide!

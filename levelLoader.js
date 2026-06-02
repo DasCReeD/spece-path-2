@@ -119,6 +119,120 @@ function computeTileGeometry(tile) {
 }
 
 /**
+ * Create a sloped/triangular geometry representing a ramp.
+ * Returns a THREE.BufferGeometry with custom vertex positions and UV coordinates.
+ */
+function createRampGeometry(w, l, yBottom, y1, y2) {
+  const w2 = w / 2;
+  const l2 = l / 2;
+
+  const v0 = [-w2, yBottom,  l2];
+  const v1 = [ w2, yBottom,  l2];
+  const v2 = [-w2, yBottom, -l2];
+  const v3 = [ w2, yBottom, -l2];
+  const v4 = [-w2, y1,       l2];
+  const v5 = [ w2, y1,       l2];
+  const v6 = [-w2, y2,      -l2];
+  const v7 = [ w2, y2,      -l2];
+
+  const vertices = [
+    // Bottom
+    ...v0, ...v2, ...v1,
+    ...v2, ...v3, ...v1,
+    // Top/Slope
+    ...v4, ...v5, ...v6,
+    ...v5, ...v7, ...v6,
+    // Front
+    ...v0, ...v1, ...v4,
+    ...v1, ...v5, ...v4,
+    // Back
+    ...v3, ...v2, ...v7,
+    ...v2, ...v6, ...v7,
+    // Left
+    ...v2, ...v0, ...v6,
+    ...v0, ...v4, ...v6,
+    // Right
+    ...v1, ...v3, ...v5,
+    ...v3, ...v7, ...v5,
+  ];
+
+  const H_ref = 2.0;
+  const uv_y1 = y1 / H_ref;
+  const uv_y2 = y2 / H_ref;
+
+  const uvs = [
+    // Bottom
+    0,0, 0,1, 1,0,
+    0,1, 1,1, 1,0,
+    // Top/Slope
+    0,1, 1,1, 0,0,
+    1,1, 1,0, 0,0,
+    // Front
+    0,0, 1,0, 0,uv_y1,
+    1,0, 1,uv_y1, 0,uv_y1,
+    // Back
+    0,0, 1,0, 0,uv_y2,
+    1,0, 1,uv_y2, 0,uv_y2,
+    // Left
+    0,0, 1,0, 0,uv_y2,
+    1,0, 1,uv_y1, 0,uv_y2,
+    // Right
+    0,0, 1,0, 0,uv_y1,
+    1,0, 1,uv_y2, 0,uv_y1,
+  ];
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+/**
+ * Scans levelData rows and dynamically inserts ramp properties for tiles
+ * immediately preceding an elevated tunnel entrance.
+ */
+function preprocessLevelRamps(levelData) {
+  if (!levelData || !levelData.rows) return;
+  const rows = levelData.rows;
+  const numRows = rows.length;
+
+  for (let r = 1; r < numRows; r++) {
+    const row = rows[r];
+    const prevRow = rows[r - 1];
+    if (!row || !prevRow) continue;
+
+    for (let c = 0; c < ROAD_WIDTH_LANES; c++) {
+      const tile = row[c];
+      // A tile is an elevated tunnel if it has tunnel flag AND is full/half block
+      if (tile && tile.tunnel && (tile.full || tile.half)) {
+        const prevTile = prevRow[c];
+        const isPrevTunnelElevated = prevTile && prevTile.tunnel && (prevTile.full || prevTile.half);
+        // Place ramp on the previous tile if it is not already an elevated tunnel
+        if (!isPrevTunnelElevated) {
+          const targetHeight = (tile.full && tile.half) ? 3.0 : (tile.full ? 2.0 : 1.0);
+          if (!prevTile) {
+            // Create a new ramp tile
+            prevRow[c] = {
+              ramp: true,
+              startY: 0.0,
+              endY: targetHeight,
+              top_color: tile.top_color,
+              bottom_color: tile.bottom_color,
+            };
+          } else {
+            // Turn existing tile into a ramp
+            prevTile.ramp = true;
+            prevTile.startY = 0.0;
+            prevTile.endY = targetHeight;
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
  * Adjust texture coordinates (UVs) of BoxGeometry dynamically to prevent
  * aspect-ratio stretching and squishing on side faces of variable-dimension blocks.
  * Maps texture at a consistent density of 1 repeat per 2.0 units of space.
@@ -749,6 +863,38 @@ function processTile(tile, r, c, palette, scene, collidables, specialTiles, road
   const xPos = (c - 3) * TILE_WIDTH;
   const zPos = -r * TILE_LENGTH + zOffset;
 
+  if (tile.ramp) {
+    const startY = tile.startY !== undefined ? tile.startY : 0.0;
+    const endY = tile.endY !== undefined ? tile.endY : 1.0;
+    const activeColor = tile.top_color !== undefined ? tile.top_color : 1;
+    const behaviorColor = activeColor > 0 ? (activeColor + 1) : 0;
+    const { behavior, emissiveGlow, glowColor } = classifyTileBehavior(behaviorColor);
+    const baseColor = getPaletteColor(palette, behaviorColor);
+    const material = createTileMaterial(baseColor, emissiveGlow, glowColor, behavior, behaviorColor, levelData);
+
+    const geom = createRampGeometry(TILE_WIDTH, TILE_LENGTH, 0.0, startY, endY);
+    const mesh = new THREE.Mesh(geom, material);
+    mesh.position.set(xPos, 0, zPos - TILE_LENGTH / 2);
+    mesh.receiveShadow = true;
+    mesh.castShadow = true;
+    scene.add(mesh);
+    roadMeshes.push(mesh);
+
+    // Collision bounding box
+    collidables.push({
+      minX: xPos - TILE_WIDTH / 2,
+      maxX: xPos + TILE_WIDTH / 2,
+      minZ: zPos - TILE_LENGTH,
+      maxZ: zPos,
+      startY,
+      endY,
+      isObstacle: true,
+      isRamp: true,
+      isFlatRoad: false,
+    });
+    return;
+  }
+
   const { height, yPos, isObstacle } = computeTileGeometry(tile);
 
   // Under the corrected Shikadi format:
@@ -1159,6 +1305,7 @@ function extractLevelMeta(levelData) {
  * Used for small levels and unit tests.
  */
 export function buildLevel(levelData, scene, zOffset = 0, isInfiniteMode = false) {
+  preprocessLevelRamps(levelData);
   const collidables = [];
   const specialTiles = [];
   const roadMeshes = [];
@@ -1201,6 +1348,7 @@ export function buildLevel(levelData, scene, zOffset = 0, isInfiniteMode = false
  * @returns {Promise<object>} Level info object (same shape as buildLevel return).
  */
 export function buildLevelAsync(levelData, scene, onProgress, zOffset = 0, isInfiniteMode = false) {
+  preprocessLevelRamps(levelData);
   const collidables = [];
   const specialTiles = [];
   const roadMeshes = [];

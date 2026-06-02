@@ -239,8 +239,8 @@ Tile = {
 |------|------:|-----:|----------------|
 | [app.js](file:///c:/dev/Sky%20roads/app.js) | 1,487 | 64 KB | Game orchestrator, state machine, UI event wiring, HUD updates, touch control mapping, physics calibrator dashboard, infinite road seamless transition manager, game loop |
 | [graphics.js](file:///c:/dev/Sky%20roads/graphics.js) | 1,675 | 71 KB | Three.js renderer, scene setup, ship mesh, skybox, particles, chase camera, volumetric fragment shaders, city scenery spawners, custom procedural space/nebula particle systems |
-| [physics.js](file:///c:/dev/Sky%20roads/physics.js) | 579 | 24 KB | Three-axis motion integration, collision detection, fuel/oxygen, special tiles terrain effects, keyboard input, dynamic calibrator settings parameters, coyote-time buffers, collision/bounce behaviors |
-| [levelLoader.js](file:///c:/dev/Sky%20roads/levelLoader.js) | 955 | 35 KB | Asynchronous geometry compilation, BoxGeometry/rounded archways, palette mappings, finish neon arches, gap/tunnel mesh optimizations |
+| [physics.js](file:///c:/dev/Sky%20roads/physics.js) | 729 | 27 KB | Three-axis motion integration, collision detection, fuel/oxygen, special tiles terrain effects, keyboard input, settings calibrator parameters, coyote-time buffers, collision/bounce behaviors, sloped ramp snapping/side collisions, tunnel entrance transition overrides |
+| [levelLoader.js](file:///c:/dev/Sky%20roads/levelLoader.js) | 1,404 | 52 KB | Asynchronous geometry compilation, BoxGeometry/rounded archways, palette mappings, finish neon arches, gap/tunnel mesh optimizations, custom triangular wedge geometry generator (`createRampGeometry`), level parser ramp pre-processing scanner |
 | [audio.js](file:///c:/dev/Sky%20roads/audio.js) | 1,060 | 35 KB | Procedural sound synthesis via Web Audio API, speed-modulated engine hum, jump sweeps, and background synthesizer music playback. Manages sound effect triggers and sound mode selection (Synth vs. Classic). |
 | [oplSynth.js](file:///c:/dev/Sky%20roads/oplSynth.js) | 631 | 19 KB | Real-time 15-channel OPL2 AdLib FM synthesis engine, DOS LZS decompressor stream parser, and Muzax / SFX sound structure decoders. |
 | [levels.js](file:///c:/dev/Sky%20roads/levels.js) | 76 | 2 KB | Lazy-loading level pack manifest & caching utility to dynamically load `./data/standard_levels.json` and `./data/xmas_levels.json` without bloating initial page loads |
@@ -311,3 +311,9 @@ In infinite road mode, the game loops through levels seamlessly by stitching the
 ### 11. Physics Parameter Calibrator settings
 
 An interactive settings popup exposes real-time slider controls for fine-tuning game constants such as forward speed, boost velocity, steering inertia, wall collision bounce/pushback, coyote-time buffers, and landing bounce height. This eliminates the default floating sensation and lets players customize responsiveness.
+
+### 12. Sloped Ramps and Interpolated Snapping
+
+To support vertical gameplay and ramps leading into elevated tunnels, the level parser pre-processes loaded levels to automatically scan for raised blocks carrying a tunnel, inserting a customized 3D triangular wedge (prism) immediately preceding the tunnel entrance.
+- **Height Interpolation**: The physics loop calculates the ship's longitudinal progression ratio `t` along the ramp's Z-span and snaps the ship's Y position to the exact sloped `rampHeight = startY + t * (endY - startY)`.
+- **Collision Priorities**: Side collisions (`Math.abs(position.x - blockCenterX) > 0.35`) are evaluated before height snapping to ensure that steering into the side of a ramp blocks the ship, while front collisions are ignored when climbing the ramp (`isOnRamp`) to prevent the ship's nose from crashing/rebounding into the elevated block immediately following it.

@@ -52,8 +52,6 @@ const assetsPromise = typeof window !== 'undefined' && typeof fetch === 'functio
 class RetroMusicSequencer {
   constructor(audioCtx) {
     this.ctx = audioCtx;
-    this.bpm = 125;
-    this.stepDuration = 60 / this.bpm / 4; // 16th notes
     this.isPlaying = false;
     this.intervalId = null;
     this.currentStep = 0;
@@ -62,20 +60,64 @@ class RetroMusicSequencer {
     this.volume = 0.7; // default volume multiplier (0.0 to 1.0)
     this.soundMode = 'synth'; // 'synth' or 'classic'
 
-    // A minor / C major retro arpeggio progression (16 steps per loop)
-    this.bassLine = [
-      45, 45, 45, 45, // A2
-      43, 43, 43, 43, // G2
-      41, 41, 41, 41, // F2
-      40, 40, 40, 40  // E2
+    // Define synth tracks
+    this.tracks = [
+      {
+        name: "Retro Arpeggio",
+        bass: [
+          45, 45, 45, 45, // A2
+          43, 43, 43, 43, // G2
+          41, 41, 41, 41, // F2
+          40, 40, 40, 40  // E2
+        ],
+        lead: [
+          57, 60, 64, 69, // A3, C4, E4, A4
+          55, 59, 62, 67, // G3, B3, D4, G4
+          53, 57, 60, 65, // F3, A3, C4, F4
+          52, 56, 59, 64  // E3, G#3, B3, E4
+        ],
+        bpm: 125
+      },
+      {
+        name: "Space Drive",
+        bass: [
+          36, 36, 36, 36, // C2
+          38, 38, 38, 38, // D2
+          39, 39, 39, 39, // D#2
+          41, 41, 41, 41  // F2
+        ],
+        lead: [
+          60, 63, 67, 72, // C4, D#4, G4, C5
+          62, 65, 69, 74, // D4, F4, A4, D5
+          63, 67, 70, 75, // D#4, G4, A#4, D#5
+          65, 68, 72, 77  // F4, G#4, C5, F5
+        ],
+        bpm: 135
+      },
+      {
+        name: "Cyber Horizon",
+        bass: [
+          41, 41, 41, 41, // F2
+          45, 45, 45, 45, // A2
+          48, 48, 48, 48, // C3
+          46, 46, 46, 46  // A#2
+        ],
+        lead: [
+          65, 69, 72, 77, // F4, A4, C5, F5
+          69, 72, 76, 81, // A4, C5, E5, A5
+          72, 76, 79, 84, // C5, E5, G5, C6
+          70, 74, 77, 82  // A#4, D5, F5, A#5
+        ],
+        bpm: 118
+      }
     ];
+    this.currentTrackIndex = 0;
 
-    this.leadArp = [
-      57, 60, 64, 69, // A3, C4, E4, A4
-      55, 59, 62, 67, // G3, B3, D4, G4
-      53, 57, 60, 65, // F3, A3, C4, F4
-      52, 56, 59, 64  // E3, G#3, B3, E4
-    ];
+    const track = this.tracks[this.currentTrackIndex];
+    this.bassLine = track.bass;
+    this.leadArp = track.lead;
+    this.bpm = track.bpm;
+    this.stepDuration = 60 / this.bpm / 4; // 16th notes
   }
 
   init() {
@@ -90,8 +132,18 @@ class RetroMusicSequencer {
     if (this.gainNode) {
       this.gainNode.gain.cancelScheduledValues(this.ctx.currentTime);
       this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, this.ctx.currentTime);
-      this.gainNode.gain.linearRampToValueAtTime(0.35 * this.volume, this.ctx.currentTime + 0.1);
+      this.gainNode.gain.linearRampToValueAtTime(1.0 * this.volume, this.ctx.currentTime + 0.1);
     }
+  }
+
+  nextTrack() {
+    this.currentTrackIndex = (this.currentTrackIndex + 1) % this.tracks.length;
+    const track = this.tracks[this.currentTrackIndex];
+    this.bassLine = track.bass;
+    this.leadArp = track.lead;
+    this.bpm = track.bpm;
+    this.stepDuration = 60 / this.bpm / 4;
+    return track.name;
   }
 
   midiToFreq(note) {
@@ -114,7 +166,7 @@ class RetroMusicSequencer {
       bassOsc.type = isClassic ? "square" : "triangle";
       bassOsc.frequency.setValueAtTime(this.midiToFreq(bassNote - 12), time);
       
-      const bassVolume = isClassic ? 0.08 : 0.18;
+      const bassVolume = isClassic ? 0.16 : 0.36;
       bassGain.gain.setValueAtTime(bassVolume, time);
       bassGain.gain.exponentialRampToValueAtTime(0.001, time + this.stepDuration * 1.8);
       
@@ -130,7 +182,7 @@ class RetroMusicSequencer {
     leadOsc.type = isClassic ? "square" : "sine"; // Square waves for classic 8-bit chip tunes
     leadOsc.frequency.setValueAtTime(this.midiToFreq(leadNote), time);
 
-    const leadVolume = isClassic ? 0.03 : 0.07;
+    const leadVolume = isClassic ? 0.06 : 0.14;
     leadGain.gain.setValueAtTime(leadVolume, time);
     leadGain.gain.exponentialRampToValueAtTime(0.001, time + this.stepDuration * 0.95);
 
@@ -156,7 +208,7 @@ class RetroMusicSequencer {
 
       this.gainNode.gain.cancelScheduledValues(this.ctx.currentTime);
       this.gainNode.gain.setValueAtTime(0.0, this.ctx.currentTime);
-      this.gainNode.gain.linearRampToValueAtTime(0.35 * this.volume, this.ctx.currentTime + 0.15);
+      this.gainNode.gain.linearRampToValueAtTime(1.0 * this.volume, this.ctx.currentTime + 0.15);
 
       let nextNoteTime = this.ctx.currentTime;
       const scheduleAheadTime = 0.1;
@@ -209,6 +261,7 @@ class ClassicMusicSequencer {
     this.oplSynth = null;
     this.muzaxPlayer = null;
     this.currentSongIndex = -1;
+    this.trackOverride = -1;
   }
 
   init() {
@@ -223,8 +276,70 @@ class ClassicMusicSequencer {
     if (this.gainNode) {
       this.gainNode.gain.cancelScheduledValues(this.ctx.currentTime);
       this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, this.ctx.currentTime);
-      this.gainNode.gain.linearRampToValueAtTime(0.35 * this.volume, this.ctx.currentTime + 0.1);
+      this.gainNode.gain.linearRampToValueAtTime(1.0 * this.volume, this.ctx.currentTime + 0.1);
     }
+  }
+
+  getCurrentSongIndex(isGameplay) {
+    if (this.trackOverride !== -1) {
+      return this.trackOverride;
+    }
+    if (this.isPlaying && this.currentSongIndex !== -1) {
+      return this.currentSongIndex;
+    }
+    // Fallback detection
+    let songIndex = 1;
+    if (isGameplay === true) {
+      const levelIdx = (typeof window !== 'undefined' && window.gameManagerInstance)
+        ? (window.gameManagerInstance.currentLevelIndex || 0)
+        : 0;
+      songIndex = (levelIdx % 12) + 2;
+    } else if (isGameplay === false) {
+      songIndex = 1;
+    } else {
+      if (typeof window !== 'undefined' && window.gameManagerInstance) {
+        const state = window.gameManagerInstance.gameState;
+        if (state === 'playing' || state === 'loading') {
+          const levelIdx = window.gameManagerInstance.currentLevelIndex || 0;
+          songIndex = (levelIdx % 12) + 2;
+        } else {
+          songIndex = 1;
+        }
+      }
+    }
+    return songIndex;
+  }
+
+  nextTrack() {
+    this.init();
+    if (!songsData) return null;
+    
+    let currentIdx = this.getCurrentSongIndex();
+    const nextIdx = (currentIdx + 1) % songsData.length;
+    this.trackOverride = nextIdx;
+    
+    const CLASSIC_TRACK_NAMES = [
+      "Intro Theme",
+      "Main Menu Theme",
+      "Road 1 Theme",
+      "Road 2 Theme",
+      "Road 3 Theme",
+      "Road 4 Theme",
+      "Road 5 Theme",
+      "Road 6 Theme",
+      "Road 7 Theme",
+      "Road 8 Theme",
+      "Road 9 Theme",
+      "Road 10 Theme",
+      "Road 11 Theme",
+      "Road 12 Theme"
+    ];
+    
+    // Stop and restart to play the override song index
+    this.stop();
+    this.start();
+    
+    return CLASSIC_TRACK_NAMES[nextIdx] || `Song ${nextIdx}`;
   }
 
   start(isGameplay) {
@@ -241,9 +356,11 @@ class ClassicMusicSequencer {
       return;
     }
 
-    // Determine the song index based on GameManager state or direct argument
+    // Determine the song index based on trackOverride, gameplay state, or direct argument
     let songIndex = 1; // Default to menu song
-    if (isGameplay === true) {
+    if (this.trackOverride !== -1) {
+      songIndex = this.trackOverride;
+    } else if (isGameplay === true) {
       const levelIdx = (typeof window !== 'undefined' && window.gameManagerInstance)
         ? (window.gameManagerInstance.currentLevelIndex || 0)
         : 0;
@@ -289,7 +406,7 @@ class ClassicMusicSequencer {
 
       this.gainNode.gain.cancelScheduledValues(this.ctx.currentTime);
       this.gainNode.gain.setValueAtTime(this.gainNode.gain.value || 0.0, this.ctx.currentTime);
-      this.gainNode.gain.linearRampToValueAtTime(0.35 * this.volume, this.ctx.currentTime + 0.15);
+      this.gainNode.gain.linearRampToValueAtTime(1.0 * this.volume, this.ctx.currentTime + 0.15);
 
       // Create script processor
       const bufferSize = 2048;
@@ -474,7 +591,10 @@ class AudioSynthesizer {
       try {
         const source = this.ctx.createBufferSource();
         source.buffer = sfxBuffers[index];
-        this.connectSfxNode(source);
+        const boostGain = this.ctx.createGain();
+        boostGain.gain.setValueAtTime(2.2, this.ctx.currentTime);
+        source.connect(boostGain);
+        this.connectSfxNode(boostGain);
         source.start();
         return true;
       } catch (e) {
@@ -1073,6 +1193,10 @@ class AudioSynthesizer {
 
   startMusic(isGameplay) {
     this.init();
+    // Reset manual classic track overrides on a fresh level start
+    if (isGameplay !== undefined && this.classicSequencer) {
+      this.classicSequencer.trackOverride = -1;
+    }
     const active = this.getActiveSequencer();
     if (active) {
       active.start(isGameplay);
@@ -1101,6 +1225,48 @@ class AudioSynthesizer {
       } else {
         active.start();
       }
+    }
+  }
+
+  nextTrack() {
+    this.init();
+    const active = this.getActiveSequencer();
+    if (active && typeof active.nextTrack === 'function') {
+      return active.nextTrack();
+    }
+    return null;
+  }
+
+  getCurrentTrackName() {
+    if (this.soundMode === 'synth') {
+      if (this.retroSequencer) {
+        const idx = this.retroSequencer.currentTrackIndex;
+        const track = this.retroSequencer.tracks[idx];
+        return track ? track.name : "Retro Arpeggio";
+      }
+      return "Retro Arpeggio";
+    } else {
+      if (this.classicSequencer) {
+        const idx = this.classicSequencer.getCurrentSongIndex();
+        const CLASSIC_TRACK_NAMES = [
+          "Intro Theme",
+          "Main Menu Theme",
+          "Road 1 Theme",
+          "Road 2 Theme",
+          "Road 3 Theme",
+          "Road 4 Theme",
+          "Road 5 Theme",
+          "Road 6 Theme",
+          "Road 7 Theme",
+          "Road 8 Theme",
+          "Road 9 Theme",
+          "Road 10 Theme",
+          "Road 11 Theme",
+          "Road 12 Theme"
+        ];
+        return CLASSIC_TRACK_NAMES[idx] || `Song ${idx}`;
+      }
+      return "Classic Theme";
     }
   }
 }

@@ -891,8 +891,9 @@ export class GraphicsEngine {
     texture.needsUpdate = true;
   }
 
-  loadModelAndTexture(modelName, skinName, colorHex, onComplete) {
+  loadModelAndTexture(modelName, skinName, colorHex, onComplete, onError) {
     if (typeof colorHex === 'function') {
+      onError = onComplete;
       onComplete = colorHex;
       if (skinName && skinName.startsWith('#')) {
         colorHex = skinName;
@@ -935,14 +936,14 @@ export class GraphicsEngine {
         fbxLoader.load(modelUrl, (fbx) => {
           applyTextureToModel(texture, fbx);
         }, undefined, (err) => {
-          // Fallback / error catch
+          if (onError) onError(err);
         });
       } else {
         const objLoader = new OBJLoader();
         objLoader.load(modelUrl, (obj) => {
           applyTextureToModel(texture, obj);
         }, undefined, (err) => {
-          // Fallback / error catch
+          if (onError) onError(err);
         });
       }
     };
@@ -1232,6 +1233,11 @@ export class GraphicsEngine {
 
     this.shipMesh.add(this.nozzleR);
 
+    // Hide procedural parts initially because the selected spaceship model will load asynchronously
+    this.shipMesh.children.forEach((c) => {
+      c.visible = false;
+    });
+
     // Asynchronously load the premium spaceship model
     try {
       this.loadModelAndTexture(this.currentModelName, this.currentSkinName, this.currentSkinColor, (obj) => {
@@ -1266,9 +1272,16 @@ export class GraphicsEngine {
 
         this.shipMesh.add(obj);
         this.isObjLoaded = true;
+      }, (err) => {
+        console.warn("Failed to load ship model, falling back to procedural ship:", err);
+        this.shipMesh.children.forEach((c) => {
+          c.visible = true;
+        });
       });
     } catch (e) {
-      // Graceful catch
+      this.shipMesh.children.forEach((c) => {
+        c.visible = true;
+      });
     }
 
     this.scene.add(this.shipMesh);
@@ -1342,6 +1355,12 @@ export class GraphicsEngine {
 
     // Discard any existing loaded 3D model in shipMesh to prevent leaks!
     if (this.shipMesh) {
+      // Hide procedural fallback parts during load transition
+      this.shipMesh.children.forEach((c, idx) => {
+        if (idx < 8) {
+          c.visible = false;
+        }
+      });
       // Keep only procedural meshes (first 8 children) and remove the rest
       for (let i = this.shipMesh.children.length - 1; i >= 8; i--) {
         const child = this.shipMesh.children[i];
@@ -1392,9 +1411,20 @@ export class GraphicsEngine {
 
         this.shipMesh.add(obj);
         this.isObjLoaded = true;
+      }, (err) => {
+        console.warn("Failed to change ship model, falling back to procedural ship:", err);
+        if (this.shipMesh) {
+          this.shipMesh.children.forEach((c, idx) => {
+            if (idx < 8) c.visible = true;
+          });
+        }
       });
     } catch (e) {
-      // Graceful catch
+      if (this.shipMesh) {
+        this.shipMesh.children.forEach((c, idx) => {
+          if (idx < 8) c.visible = true;
+        });
+      }
     }
   }
 

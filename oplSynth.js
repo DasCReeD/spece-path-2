@@ -355,9 +355,6 @@ export class OplSynthJS {
   }
 
   configureOscStart(osc, currentFreqNum, currentBlockNum, freqNum, blockNum) {
-    if (currentFreqNum === freqNum && currentBlockNum === blockNum && osc.state === 'Sustain') {
-      return;
-    }
     osc.state = 'Attack';
     osc.envelopeStep = 0;
   }
@@ -375,6 +372,9 @@ export class OplSynthJS {
     let out = 0.0;
     for (let c = 0; c < this.channels.length; c++) {
       out += this.processChannel(c);
+    }
+    if (isNaN(out)) {
+      out = 0.0;
     }
     return Math.max(-1.0, Math.min(1.0, out / 2.0));
   }
@@ -421,11 +421,11 @@ export class OplSynthJS {
           osc.envelopeStep = 0;
           osc.state = 'Decay';
         } else {
-          const steps = Math.max(1, Math.floor((this.sampleRate * 1000.0) / timeToAttack));
+          const steps = Math.max(1, Math.floor((this.sampleRate * timeToAttack) / 1000.0));
           const p = 3.0;
           osc.volume = -96.0 * Math.pow(Math.max(0, (steps - osc.envelopeStep) / steps), p);
           osc.envelopeStep++;
-          if (osc.envelopeStep >= steps) {
+          if (osc.envelopeStep >= steps || isNaN(osc.volume)) {
             osc.envelopeStep = 0;
             osc.volume = MAX_DB;
             osc.state = 'Decay';
@@ -436,17 +436,18 @@ export class OplSynthJS {
       case 'Decay': {
         const rate = getRate(osc.config.decayRate);
         const timeToDecay = DECAY_RATES[rate];
-        if (timeToDecay === 0.0) {
+        if (timeToDecay === 0.0 || isNaN(timeToDecay)) {
           osc.volume = osc.config.sustainLevel;
           osc.envelopeStep = 0;
           osc.state = 'Sustain';
-        } else if (!isNaN(timeToDecay)) {
-          const steps = Math.max(1, Math.floor((this.sampleRate * 1000.0) / timeToDecay));
+        } else {
+          const steps = Math.max(1, Math.floor((this.sampleRate * timeToDecay) / 1000.0));
           const decreaseAmt = osc.config.sustainLevel / steps;
           osc.volume += decreaseAmt;
           osc.envelopeStep++;
-          if (osc.envelopeStep >= steps) {
+          if (osc.envelopeStep >= steps || isNaN(osc.volume)) {
             osc.envelopeStep = 0;
+            osc.volume = osc.config.sustainLevel;
             osc.state = 'Sustain';
           }
         }
@@ -461,13 +462,18 @@ export class OplSynthJS {
       case 'Release': {
         const rate = getRate(osc.config.releaseRate);
         const timeToRelease = DECAY_RATES[rate];
-        const steps = Math.max(1, Math.floor((this.sampleRate * 1000.0) / timeToRelease));
-        const decreaseAmt = (MIN_DB - osc.config.sustainLevel) / steps;
-        osc.volume += decreaseAmt;
-        osc.envelopeStep++;
-        if (osc.envelopeStep >= steps) {
+        if (isNaN(timeToRelease)) {
           osc.volume = MIN_DB;
           osc.state = 'Off';
+        } else {
+          const steps = Math.max(1, Math.floor((this.sampleRate * timeToRelease) / 1000.0));
+          const decreaseAmt = (MIN_DB - osc.config.sustainLevel) / steps;
+          osc.volume += decreaseAmt;
+          osc.envelopeStep++;
+          if (osc.envelopeStep >= steps || isNaN(osc.volume)) {
+            osc.volume = MIN_DB;
+            osc.state = 'Off';
+          }
         }
         break;
       }
@@ -480,7 +486,7 @@ export class OplSynthJS {
       ksDamping = -kslm * (levelVal || 0.0);
     }
 
-    let freq = FREQ_STARTS[blockNum] + FREQ_STEPS[blockNum] * freqNum;
+    let freq = (freqNum * 49716.0) / Math.pow(2, 20 - blockNum);
     freq *= osc.config.multiplication === 0.0 ? 0.5 : osc.config.multiplication;
 
     const vib = osc.config.vibrato ? (Math.cos(this.time * 2.0 * Math.PI) * 0.00004 + 1.0) : 1.0;
@@ -495,7 +501,7 @@ export class OplSynthJS {
     const wave = WAVES[osc.config.waveForm][waveIndex];
 
     const tremolo = osc.config.tremolo ? Math.abs(Math.cos(this.time * Math.PI * 3.7)) : 0.0;
-    return wave * Math.pow(10.0, (osc.volume + osc.config.outputLevel + tremolo + ksDamping) / 10.0);
+    return wave * Math.pow(10.0, (osc.volume + osc.config.outputLevel + tremolo + ksDamping) / 20.0);
   }
 }
 
@@ -622,7 +628,7 @@ export class MuzaxPlayerJS {
     ];
     const highFreqs = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1];
     const noteIdx = note % 12;
-    const octave = Math.floor(note / 12) + 2;
+    const octave = Math.floor(note / 12) + 3;
     const freqNum = (highFreqs[noteIdx] << 8) | lowFreqs[noteIdx];
     const target = channel < 6 ? channel : (channel - 6 + 6);
     synth.startNote(target, freqNum, octave);

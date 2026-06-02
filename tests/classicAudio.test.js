@@ -73,6 +73,9 @@ describe('ClassicAudioIntegration', () => {
   });
 
   afterEach(() => {
+    if (gameAudio) {
+      gameAudio.stopMusic();
+    }
     vi.restoreAllMocks();
   });
 
@@ -112,5 +115,30 @@ describe('ClassicAudioIntegration', () => {
     // In classic fallback, it creates an oscillator and gain node
     expect(mockCtx.createOscillator).toHaveBeenCalled();
     expect(mockCtx.createGain).toHaveBeenCalled();
+  });
+
+  it('should cycle through synth tracks on nextTrack() call in synth mode', () => {
+    gameAudio.init();
+    gameAudio.setSoundMode('synth');
+    expect(gameAudio.getCurrentTrackName()).toBe('Retro Arpeggio');
+    
+    const nextTrackName = gameAudio.nextTrack();
+    expect(nextTrackName).toBe('Space Drive');
+    expect(gameAudio.getCurrentTrackName()).toBe('Space Drive');
+
+    const thirdTrackName = gameAudio.nextTrack();
+    expect(thirdTrackName).toBe('Cyber Horizon');
+    expect(gameAudio.getCurrentTrackName()).toBe('Cyber Horizon');
+
+    const backToFirst = gameAudio.nextTrack();
+    expect(backToFirst).toBe('Retro Arpeggio');
+  });
+
+  it('should fall back to synth track name on nextTrack() call in classic mode if songs data is not loaded', () => {
+    gameAudio.init();
+    gameAudio.setSoundMode('classic');
+    
+    const nextTrack = gameAudio.nextTrack();
+    expect(nextTrack).toBe('Space Drive');
   });
 });
