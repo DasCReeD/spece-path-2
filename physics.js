@@ -318,7 +318,7 @@ export class PhysicsEngine {
     this.groundHeight = -10.0; // If you fall, you keep falling
 
     // Create ship bounding box
-    const shipBox = this.getShipBox();
+    let shipBox = this.getShipBox();
 
     // Check collisions with all level collidables
     for (const block of levelInfo.collidables) {
@@ -348,8 +348,7 @@ export class PhysicsEngine {
             }
             this.velocity.x = 0;
             this.triggerWallCollisionAudio = true;
-            shipBox.minX = this.position.x - halfW;
-            shipBox.maxX = this.position.x + halfW;
+            shipBox = this.getShipBox();
             isSideHit = true;
           }
 
@@ -361,6 +360,7 @@ export class PhysicsEngine {
               this.groundHeight = rampHeight;
               this.onGround = true;
               this.velocity.y = 0;
+              shipBox = this.getShipBox();
             }
           }
         }
@@ -407,10 +407,7 @@ export class PhysicsEngine {
                   this.velocity.x = 0;
                   
                   // Update the ship's bounding box
-                  const halfW = SHIP_WIDTH / 2;
-                  const halfL = SHIP_LENGTH / 2;
-                  shipBox.minZ = this.position.z - halfL;
-                  shipBox.maxZ = this.position.z + halfL;
+                  shipBox = this.getShipBox();
                 } else {
                   // Front collision -> Crash!
                   this.isDead = true;
@@ -439,8 +436,7 @@ export class PhysicsEngine {
               this.triggerWallCollisionAudio = true;
 
               // Update the ship's bounding box for subsequent collision checks in this frame
-              shipBox.minX = this.position.x - halfW;
-              shipBox.maxX = this.position.x + halfW;
+              shipBox = this.getShipBox();
             }
           }
         }
@@ -466,6 +462,7 @@ export class PhysicsEngine {
             this.velocity.y = 0;
             this.justRebounded = false;
           }
+          shipBox = this.getShipBox();
         }
       }
     }

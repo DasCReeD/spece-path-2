@@ -236,4 +236,31 @@ describe('Sloped Ramp Physics Engine Mechanics', () => {
     // Verify ship is NOT dead (should not crash into the elevated block under the tunnel)
     expect(physics.isDead).toBe(false);
   });
+
+  it('should not crash when landing on a ramp near the top (e.g. z = -4.1) where center has crossed the boundary but snout overlaps the next block', () => {
+    levelInfo.collidables.push({
+      minX: -TILE_WIDTH / 2,
+      maxX: TILE_WIDTH / 2,
+      minZ: -TILE_LENGTH * 2,
+      maxZ: -TILE_LENGTH,
+      minY: 0,
+      maxY: 2.0,
+      isObstacle: true,
+      isFlatRoad: false
+    });
+
+    // Ship is landing on the ramp near the top (z = -4.1).
+    // Ramp height at z = -4.1 is 2.0 (clamped).
+    // Ship is at y = 1.2, falling (vy = -2.0).
+    physics.position.set(0, 1.2, -4.1);
+    physics.velocity.set(0, -2.0, -10.0);
+    physics.onGround = false;
+
+    physics.update(0.016, keyboard, levelInfo);
+
+    // Verify ship is NOT dead and snaps to top
+    expect(physics.isDead).toBe(false);
+    expect(physics.position.y).toBeCloseTo(2.0, 3);
+    expect(physics.onGround).toBe(true);
+  });
 });
