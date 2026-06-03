@@ -130,6 +130,15 @@ class GameManager {
     const sfxVol = savedSfxVolume !== null ? parseFloat(savedSfxVolume) : 0.8;
     gameAudio.setSfxVolume(sfxVol);
 
+    // Load persisted bottom HUD toggle setting from localStorage
+    this.bottomHudEnabled = localStorage.getItem('skyroads_bottom_hud') !== 'false';
+    this.updateBottomHudToggleBtn();
+
+    // Load persisted stick throttle setting from localStorage
+    const savedStickThrottle = localStorage.getItem('skyroads_stick_throttle') === 'true';
+    this.keyboard.touchJoystickThrottleEnabled = savedStickThrottle;
+    this.updateStickThrottleToggleBtn();
+
     // Sync sliders values with loaded volumes
     const sliderMusicVolume = document.getElementById('slider-settings-music-volume');
     if (sliderMusicVolume) {
@@ -319,6 +328,48 @@ class GameManager {
         btn.classList.add('btn-info');
       }
     });
+  }
+
+  updateBottomHudToggleBtn() {
+    const isEnabled = this.bottomHudEnabled;
+    const btn = document.getElementById('btn-settings-bottom-hud');
+    if (btn) {
+      if (isEnabled) {
+        btn.innerText = 'BOTTOM HUD: ON';
+        btn.classList.remove('btn-info');
+        btn.classList.add('btn-primary');
+      } else {
+        btn.innerText = 'BOTTOM HUD: OFF';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-info');
+      }
+    }
+
+    // Immediately toggle HTML 2D HUD container visibility if playing or paused
+    const hud = document.getElementById('hud');
+    if (hud) {
+      if (isEnabled && (this.gameState === 'playing' || this.gameState === 'paused')) {
+        hud.classList.remove('hidden');
+      } else {
+        hud.classList.add('hidden');
+      }
+    }
+  }
+
+  updateStickThrottleToggleBtn() {
+    const isEnabled = this.keyboard.touchJoystickThrottleEnabled;
+    const btn = document.getElementById('btn-settings-stick-throttle');
+    if (btn) {
+      if (isEnabled) {
+        btn.innerText = 'STICK THROTTLE: ON';
+        btn.classList.remove('btn-info');
+        btn.classList.add('btn-primary');
+      } else {
+        btn.innerText = 'STICK THROTTLE: OFF';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-info');
+      }
+    }
   }
 
   updateDifficultyToggleBtn() {
@@ -901,6 +952,26 @@ class GameManager {
       });
     }
 
+    const btnSettingsBottomHud = document.getElementById('btn-settings-bottom-hud');
+    if (btnSettingsBottomHud) {
+      btnSettingsBottomHud.addEventListener('click', () => {
+        gameAudio.playClick();
+        this.bottomHudEnabled = !this.bottomHudEnabled;
+        localStorage.setItem('skyroads_bottom_hud', this.bottomHudEnabled);
+        this.updateBottomHudToggleBtn();
+      });
+    }
+
+    const btnSettingsStickThrottle = document.getElementById('btn-settings-stick-throttle');
+    if (btnSettingsStickThrottle) {
+      btnSettingsStickThrottle.addEventListener('click', () => {
+        gameAudio.playClick();
+        this.keyboard.touchJoystickThrottleEnabled = !this.keyboard.touchJoystickThrottleEnabled;
+        localStorage.setItem('skyroads_stick_throttle', this.keyboard.touchJoystickThrottleEnabled);
+        this.updateStickThrottleToggleBtn();
+      });
+    }
+
     const btnSettingsPicker = document.getElementById('btn-settings-picker');
     if (btnSettingsPicker) {
       btnSettingsPicker.addEventListener('click', () => {
@@ -1413,7 +1484,11 @@ class GameManager {
     const gravityTextEl = document.getElementById('hud-gravity-text');
     if (gravityTextEl) gravityTextEl.innerText = String(gravityVal).padStart(4, '0');
 
-    document.getElementById('hud').classList.remove('hidden');
+    if (this.bottomHudEnabled) {
+      document.getElementById('hud').classList.remove('hidden');
+    } else {
+      document.getElementById('hud').classList.add('hidden');
+    }
     this.showScreen(''); // Hide all menus
 
     // Toggle Pause Trigger button visibility
@@ -1542,6 +1617,7 @@ class GameManager {
 
         joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
         this.keyboard.setTouchSteerAmount(dx / maxDist);
+        this.keyboard.setTouchJoystickY(dy / maxDist);
       };
 
       const handleEnd = (e) => {
@@ -1554,6 +1630,7 @@ class GameManager {
         joystickKnob.style.transition = 'transform 0.15s cubic-bezier(0.25, 0.8, 0.25, 1.4)';
         joystickKnob.style.transform = 'translate(0px, 0px)';
         this.keyboard.setTouchSteerAmount(0);
+        this.keyboard.setTouchJoystickY(0);
       };
 
       joystickBase.addEventListener('pointerdown', (e) => {

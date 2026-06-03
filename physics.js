@@ -627,6 +627,7 @@ export class KeyboardController {
 
     this.mouseControlsEnabled = false;
     this.touchControlsEnabled = false;
+    this.touchJoystickThrottleEnabled = false;
 
     this.gamepadConnected = false;
     this.gamepad = {
@@ -768,6 +769,26 @@ export class KeyboardController {
     } else {
       this.touch.left = false;
       this.touch.right = false;
+    }
+    this.updateCombinedState();
+  }
+
+  setTouchJoystickY(yAmount) {
+    if (!this.touchJoystickThrottleEnabled) {
+      this.touch.forward = false;
+      this.touch.backward = false;
+      return;
+    }
+    // yAmount ranges from -1 (top/forward) to 1 (bottom/backward)
+    if (yAmount < -0.2) {
+      this.touch.forward = true;
+      this.touch.backward = false;
+    } else if (yAmount > 0.2) {
+      this.touch.forward = false;
+      this.touch.backward = true;
+    } else {
+      this.touch.forward = false;
+      this.touch.backward = false;
     }
     this.updateCombinedState();
   }

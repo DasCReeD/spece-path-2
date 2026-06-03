@@ -488,7 +488,15 @@ export class CockpitConsole3D {
    * Update the gauges and minimap state dynamically.
    */
   update(physics, levelData, cameraMode) {
-    // 3D Cockpit Console HUD is now visible and updated in all camera modes!
+    // Check if bottom HUD is enabled
+    const bottomHudEnabled = (typeof window !== 'undefined' && window.gameManagerInstance)
+      ? window.gameManagerInstance.bottomHudEnabled
+      : (typeof localStorage !== 'undefined' ? localStorage.getItem('skyroads_bottom_hud') !== 'false' : true);
+
+    if (!bottomHudEnabled) {
+      this.group.visible = false;
+      return;
+    }
     this.group.visible = true;
 
     // Optional Polycarbonate glass bezel and border visibility control
@@ -595,8 +603,11 @@ export class CockpitConsole3D {
     const manager = (typeof window !== 'undefined') ? window.gameManagerInstance : null;
     if (manager) {
       packLabel = manager.currentPack === 'standard' ? 'STANDARD' : 'XMAS';
-      const roadNames = manager.currentPack === 'standard' ? [...manager.standardRoadNames, ...manager.xmasRoadNames] : manager.xmasRoadNames;
-      roadLabel = roadNames[manager.currentLevelIndex] || `ROAD ${manager.currentLevelIndex + 1}`;
+      const roadNames = (manager.currentPack === 'standard')
+        ? [...(manager.standardRoadNames || []), ...(manager.xmasRoadNames || [])]
+        : (manager.xmasRoadNames || []);
+      const currentIdx = manager.currentLevelIndex || 0;
+      roadLabel = roadNames[currentIdx] || `ROAD ${currentIdx + 1}`;
     }
 
     if (activeEffects.boost) {
