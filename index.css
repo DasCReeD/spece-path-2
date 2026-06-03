@@ -1518,6 +1518,48 @@ body, html {
   transform: scale(0.92);
 }
 
+/* Top-Right Fullscreen Trigger Button styling */
+.btn-fullscreen-trigger {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 46px;
+  height: 46px;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--color-secondary);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn-fullscreen-trigger svg {
+  transition: transform 0.2s ease, color 0.2s ease;
+  filter: drop-shadow(0 0 4px var(--color-secondary-glow));
+}
+
+.btn-fullscreen-trigger:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: scale(1.05);
+  border-color: var(--color-secondary);
+  color: var(--color-primary);
+}
+
+.btn-fullscreen-trigger:hover svg {
+  filter: drop-shadow(0 0 4px var(--color-primary-glow));
+}
+
+.btn-fullscreen-trigger:active {
+  transform: scale(0.92);
+}
+
 /* Mobile Touch Controls HUD Styling with high-fidelity glassmorphism */
 .touch-hud {
   position: absolute;

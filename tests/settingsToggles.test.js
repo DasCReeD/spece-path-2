@@ -122,4 +122,43 @@ describe('Settings Toggles & Mobile Features', () => {
       expect(cockpit.group.visible).toBe(true);
     });
   });
+
+  describe('Fullscreen Toggle Button', () => {
+    it('should toggle element innerHTML based on document.fullscreenElement state changes', () => {
+      const btn = document.createElement('button');
+      btn.id = 'btn-fullscreen-trigger';
+      document.body.appendChild(btn);
+
+      const onFullscreenChange = () => {
+        const btnEl = document.getElementById('btn-fullscreen-trigger');
+        if (!btnEl) return;
+        if (document.fullscreenElement) {
+          btnEl.innerHTML = 'Exit';
+        } else {
+          btnEl.innerHTML = 'Enter';
+        }
+      };
+
+      document.addEventListener('fullscreenchange', onFullscreenChange);
+
+      // Enter Fullscreen
+      Object.defineProperty(document, 'fullscreenElement', {
+        value: document.documentElement,
+        configurable: true
+      });
+      document.dispatchEvent(new Event('fullscreenchange'));
+      expect(btn.innerHTML).toBe('Exit');
+
+      // Exit Fullscreen
+      Object.defineProperty(document, 'fullscreenElement', {
+        value: null,
+        configurable: true
+      });
+      document.dispatchEvent(new Event('fullscreenchange'));
+      expect(btn.innerHTML).toBe('Enter');
+
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.body.removeChild(btn);
+    });
+  });
 });
