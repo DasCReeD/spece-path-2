@@ -51,8 +51,8 @@ describe('Ramp Pre-processing and Geometry Rendering', () => {
     scene = createMockScene();
   });
 
-  it('should detect an elevated tunnel and place a ramp on the previous row', () => {
-    // Row 1: Tunnel on a raised block (full block)
+  it('should not place a ramp for tunnel tiles since their floors are flat on the ground', () => {
+    // Row 1: Tunnel with block flags
     // Row 0: Flat road
     const tunnelTile = createFullBlockTile({ tunnel: true, bottom_color: 1 });
     const flatTile = createFlatTile();
@@ -66,34 +66,12 @@ describe('Ramp Pre-processing and Geometry Rendering', () => {
 
     const result = buildLevel(levelData, scene);
 
-    // Verify row 0 got pre-processed into a ramp
-    expect(levelData.rows[0][3].ramp).toBe(true);
-    expect(levelData.rows[0][3].endY).toBe(2.0); // Full block height
-
-    // Verify a ramp collidable was registered
-    const rampCollidable = result.collidables.find(c => c.isRamp);
-    expect(rampCollidable).toBeDefined();
-    expect(rampCollidable.startY).toBe(0.0);
-    expect(rampCollidable.endY).toBe(2.0);
-    expect(rampCollidable.minZ).toBe(-TILE_LENGTH); // Exit at Z = -4.0
-    expect(rampCollidable.maxZ).toBe(0.0);          // Enter at Z = 0.0
-  });
-
-  it('should not place a ramp if the previous tile is already an elevated tunnel', () => {
-    const tunnelTile1 = createFullBlockTile({ tunnel: true, bottom_color: 1 });
-    const tunnelTile2 = createFullBlockTile({ tunnel: true, bottom_color: 1 });
-    
-    const levelData = createBaseLevelData({
-      rows: [
-        [null, null, null, tunnelTile1, null, null, null],
-        [null, null, null, tunnelTile2, null, null, null]
-      ]
-    });
-
-    const result = buildLevel(levelData, scene);
-
-    // Verify row 0 did NOT get a ramp because it is already an elevated tunnel
+    // Verify row 0 did NOT get pre-processed into a ramp
     expect(levelData.rows[0][3].ramp).toBeUndefined();
+
+    // Verify no ramp collidable was registered
+    const rampCollidable = result.collidables.find(c => c.isRamp);
+    expect(rampCollidable).toBeUndefined();
   });
 });
 

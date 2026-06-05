@@ -3,6 +3,7 @@
 // We mock all dependency modules and test behavior through DOM interactions.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as THREE from 'three';
 
 // ── Mock Level Data ────────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ const mockPhysicsInstance = {
 const mockKeyboardInstance = {
   forward: false, backward: false,
   left: false, right: false,
-  jump: false, resetJump: vi.fn()
+  jump: false, rewind: false, resetJump: vi.fn()
 };
 
 vi.mock('../physics.js', () => ({
@@ -133,6 +134,8 @@ function createMinimalDOM() {
     <div id="settings-screen" class="overlay-screen hidden">
       <button id="btn-settings-calibrator"></button>
       <button id="btn-settings-close"></button>
+      <button id="btn-settings-rewind"></button>
+      <button id="btn-settings-lane-snap"></button>
       <div id="settings-paused-actions" class="hidden"></div>
     </div>
 
@@ -283,6 +286,7 @@ describe('GameManager (app.js)', () => {
     mockPhysicsInstance.fuel = 3500;
     mockPhysicsInstance.triggerRefillAudio = false;
     mockPhysicsInstance.activeEffects.boost = false;
+    mockKeyboardInstance.rewind = false;
   });
 
   afterEach(() => {
@@ -554,6 +558,209 @@ describe('GameManager (app.js)', () => {
       expect(mockGraphicsInstance.triggerExplosion).toHaveBeenCalledWith(
         mockPhysicsInstance.position
       );
+    });
+  });
+
+  // ── handleDeath Rewind Mechanic behavior ──────────────────────────────────
+
+  describe('handleDeath() Rewind Mechanic', () => {
+    it('should record snapshots during active play frames and prune old ones', async () => {
+      await loadApp();
+      await clickAndFlush('btn-play-standard');
+      const grid = document.getElementById('level-grid');
+      await clickElementAndFlush(grid.querySelector('.level-item'));
+
+      const manager = window.gameManagerInstance;
+      expect(manager.stateHistory.length).toBe(0);
+
+      // Run a frame at t=1000
+      manager.animate(1000);
+      expect(manager.stateHistory.length).toBe(1);
+      expect(manager.stateHistory[0].timestamp).toBe(1000);
+
+      // Run another frame at t=2000
+      manager.animate(2000);
+      expect(manager.stateHistory.length).toBe(2);
+      expect(manager.stateHistory[1].timestamp).toBe(2000);
+
+      // Run another frame at t=3500 (1000 should NOT be pruned in 3-second window)
+      manager.animate(3500);
+      expect(manager.stateHistory.length).toBe(3);
+      expect(manager.stateHistory[0].timestamp).toBe(1000);
+
+      // Run another frame at t=4500 (1000 should be pruned since 4500 - 3000 = 1500)
+      manager.animate(4500);
+      expect(manager.stateHistory.length).toBe(3);
+      expect(manager.stateHistory[0].timestamp).toBe(2000);
+      expect(manager.stateHistory[1].timestamp).toBe(3500);
+      expect(manager.stateHistory[2].timestamp).toBe(4500);
+    });
+
+    it('should trigger rewind, display overlays, and restore state after timeout if rewind is enabled', async () => {
+      await loadApp();
+      await clickAndFlush('btn-play-standard');
+      const grid = document.getElementById('level-grid');
+      await clickElementAndFlush(grid.querySelector('.level-item'));
+
+      const manager = window.gameManagerInstance;
+      manager.rewindEnabled = true;
+
+      // Populate history with a snapshot
+      const pastPosition = new THREE.Vector3(1, 2, -10);
+      const pastVelocity = new THREE.Vector3(0, 0, -20);
+      manager.stateHistory = [{
+        timestamp: 1000,
+        position: pastPosition.clone(),
+        velocity: pastVelocity.clone(),
+        onGround: true,
+        groundHeight: 0.2,
+        isRebounding: false,
+        reboundTimer: 0.0,
+        justRebounded: false,
+        fuel: 4000,
+        oxygen: 90,
+        activeEffects: { boost: false },
+        wallHits: 0,
+        totalTime: 1.0,
+        speedAccumulator: 20.0,
+        speedTicks: 1
+      }];
+
+      // Mock physics properties that will be restored
+      manager.physics.position.set(2, 3, -15);
+      manager.physics.velocity.set(0, 0, 0);
+      manager.physics.isDead = true;
+      manager.physics.deathReason = 'COLLIDED WITH BLOCK';
+
+      // Call handleDeath
+      manager.handleDeath();
+
+      // Viewport elements check
+      expect(document.querySelector('.rewind-glitch-overlay')).not.toBeNull();
+      expect(document.querySelector('.vhs-rewind-indicator')).not.toBeNull();
+      expect(document.querySelector('.vhs-tracking-line')).not.toBeNull();
+      expect(manager.gameState).toBe('death');
+
+      // Fast-forward timeout (600ms in test environment)
+      vi.advanceTimersByTime(600);
+
+      // Visual overlays cleanup check
+      expect(document.querySelector('.rewind-glitch-overlay')).toBeNull();
+      expect(document.querySelector('.vhs-rewind-indicator')).toBeNull();
+      expect(document.querySelector('.vhs-tracking-line')).toBeNull();
+
+      // State restoration checks
+      expect(manager.physics.position.x).toBe(1);
+      expect(manager.physics.position.y).toBe(2);
+      expect(manager.physics.position.z).toBe(-10);
+      expect(manager.physics.velocity.z).toBe(-20);
+      expect(manager.physics.isDead).toBe(false);
+      expect(manager.physics.deathReason).toBe('');
+      expect(manager.gameState).toBe('playing');
+    });
+
+    it('should restore the original rewind snapshot if dying again within 5 seconds (cooldown loop protection)', async () => {
+      await loadApp();
+      await clickAndFlush('btn-play-standard');
+      const grid = document.getElementById('level-grid');
+      await clickElementAndFlush(grid.querySelector('.level-item'));
+
+      const manager = window.gameManagerInstance;
+      manager.rewindEnabled = true;
+
+      const firstSafePos = new THREE.Vector3(1, 1, -10);
+      const secondDangerPos = new THREE.Vector3(2, 2, -20);
+
+      // Populate first history
+      manager.stateHistory = [{
+        timestamp: 1000,
+        position: firstSafePos.clone(),
+        velocity: new THREE.Vector3(0, 0, 0),
+        activeEffects: {}
+      }];
+
+      // First death
+      manager.handleDeath();
+      
+      // Advance to complete first rewind (600ms in test env)
+      vi.advanceTimersByTime(600);
+      expect(manager.physics.position.x).toBe(1);
+
+      // Populate new history closer to danger point
+      manager.stateHistory = [{
+        timestamp: 3000,
+        position: secondDangerPos.clone(),
+        velocity: new THREE.Vector3(0, 0, 0),
+        activeEffects: {}
+      }];
+
+      // Second death (within 5 seconds since firstRewindTime)
+      manager.handleDeath();
+      
+      // Advance to complete second rewind
+      vi.advanceTimersByTime(600);
+
+      // Should have restored firstSafePos (x=1), NOT secondDangerPos (x=2)!
+      expect(manager.physics.position.x).toBe(1);
+    });
+
+    it('should bypass rewind and directly show death screen if rewind is disabled', async () => {
+      await loadApp();
+      await clickAndFlush('btn-play-standard');
+      const grid = document.getElementById('level-grid');
+      await clickElementAndFlush(grid.querySelector('.level-item'));
+
+      const manager = window.gameManagerInstance;
+      manager.rewindEnabled = false;
+
+      // Populate history
+      manager.stateHistory = [{
+        timestamp: 1000,
+        position: new THREE.Vector3(0, 0, 0),
+        velocity: new THREE.Vector3(0, 0, 0),
+        activeEffects: {}
+      }];
+
+      manager.physics.isDead = true;
+      manager.physics.deathReason = 'COLLIDED WITH BLOCK';
+
+      // Call handleDeath
+      manager.handleDeath();
+
+      // Overlays should NOT be created
+      expect(document.querySelector('.rewind-glitch-overlay')).toBeNull();
+      expect(document.querySelector('.vhs-rewind-indicator')).toBeNull();
+
+      // Fast-forward delay (1200ms for test fallback)
+      vi.advanceTimersByTime(1200);
+
+      const deathScreen = document.getElementById('death-screen');
+      expect(deathScreen.classList.contains('active')).toBe(true);
+    });
+
+    it('should toggle rewind toggle button class and text on click', async () => {
+      await loadApp();
+      const btn = document.getElementById('btn-settings-rewind');
+      expect(btn).not.toBeNull();
+
+      const manager = window.gameManagerInstance;
+      
+      // Defaults to true
+      expect(manager.rewindEnabled).toBe(true);
+      expect(btn.innerText).toBe('REWIND: ON');
+      expect(btn.classList.contains('btn-primary')).toBe(true);
+
+      // Toggle OFF
+      await clickAndFlush('btn-settings-rewind');
+      expect(manager.rewindEnabled).toBe(false);
+      expect(btn.innerText).toBe('REWIND: OFF');
+      expect(btn.classList.contains('btn-info')).toBe(true);
+
+      // Toggle ON
+      await clickAndFlush('btn-settings-rewind');
+      expect(manager.rewindEnabled).toBe(true);
+      expect(btn.innerText).toBe('REWIND: ON');
+      expect(btn.classList.contains('btn-primary')).toBe(true);
     });
   });
 
@@ -915,6 +1122,120 @@ describe('GameManager (app.js)', () => {
 
       // Now verify preset isolation: check that VGA baseline remains unaffected
       expect(localStorage.getItem('skyroads_physics_preset_baseline_vga')).toBeNull();
+    });
+  });
+
+  // ── Manual Rewind Key / Loop-Break Tests ─────────────────────────────────
+
+  describe('Manual Rewind Key (R / X button)', () => {
+    async function startLevel() {
+      await loadApp();
+      await clickAndFlush('btn-play-standard');
+      const grid = document.getElementById('level-grid');
+      await clickElementAndFlush(grid.querySelector('.level-item'));
+    }
+
+    it('should trigger VHS rewind animation when R is pressed during play', async () => {
+      await startLevel();
+      const manager = window.gameManagerInstance;
+      manager.rewindEnabled = true;
+
+      // Seed a history snapshot so rewind can restore something
+      manager.stateHistory = [{
+        timestamp: 1000,
+        position: new THREE.Vector3(0, 0, -5),
+        velocity: new THREE.Vector3(0, 0, -20),
+        onGround: true,
+        groundHeight: 0,
+        isRebounding: false,
+        reboundTimer: 0,
+        justRebounded: false,
+        fuel: 4000,
+        oxygen: 90,
+        activeEffects: {},
+        wallHits: 0,
+        totalTime: 1.0,
+        speedAccumulator: 20,
+        speedTicks: 1
+      }];
+
+      // Simulate R key held on this frame (fresh press: prev=false, curr=true)
+      manager.rewindPressedLastFrame = false;
+      manager.keyboard.rewind = true;
+
+      // Run one animate frame while playing
+      manager.animate(2000);
+
+      // handleDeath should have been called, state should switch to 'death'
+      expect(manager.gameState).toBe('death');
+      // VHS overlay should be present
+      expect(document.querySelector('.vhs-rewind-indicator')).not.toBeNull();
+    });
+
+    it('should abort active rewind and show death screen immediately when R is pressed during rewind animation', async () => {
+      await startLevel();
+      const manager = window.gameManagerInstance;
+      manager.rewindEnabled = true;
+
+      // Manually put manager into death/rewind state with an active timeout handle
+      manager.gameState = 'death';
+      manager.rewindTimeoutId = setTimeout(() => {}, 60000); // dummy long timeout
+
+      // Insert VHS overlays as if handleDeath just ran
+      const indicator = document.createElement('div');
+      indicator.className = 'vhs-rewind-indicator';
+      document.body.appendChild(indicator);
+      const glitch = document.createElement('div');
+      glitch.className = 'rewind-glitch-overlay';
+      document.body.appendChild(glitch);
+
+      // Simulate R key fresh press during death state
+      manager.rewindPressedLastFrame = false;
+      manager.keyboard.rewind = true;
+
+      manager.animate(3000);
+
+      // Rewind should have been aborted
+      expect(manager.rewindTimeoutId).toBeNull();
+      // VHS overlays should be cleaned up
+      expect(document.querySelector('.vhs-rewind-indicator')).toBeNull();
+      expect(document.querySelector('.rewind-glitch-overlay')).toBeNull();
+      // Death screen should now be visible
+      const deathScreen = document.getElementById('death-screen');
+      expect(deathScreen.classList.contains('active')).toBe(true);
+    });
+
+    it('should trigger self-destruct death screen after R is held for 4 seconds', async () => {
+      await startLevel();
+      const manager = window.gameManagerInstance;
+      manager.rewindEnabled = true;
+
+      // Simulate first frame of hold at t=1000
+      manager.rewindPressedLastFrame = false;
+      manager.keyboard.rewind = true;
+      manager.animate(1000);
+
+      // At this point it transitions to 'death' because pressing triggers rewind
+      // Reset back to playing to test the 4s hold path independently
+      manager.rewindEnabled = false; // disable rewind so handleDeath goes straight to death screen
+      manager.gameState = 'playing';
+      manager.physics.isDead = false;
+      manager.physics.deathReason = '';
+      manager.rewindTimeoutId = null;
+      manager.rewindEnabled = true;
+
+      // Seed a hold start at t=1000, and advance to t=5001 (> 4000ms hold)
+      manager.rewindPressedLastFrame = true; // already held
+      manager.rewindKeyHeldStart = 1000;
+      manager.keyboard.rewind = true;
+
+      // Run animate at t=5001 to simulate 4001ms of hold
+      manager.animate(5001);
+
+      // Should have triggered self-destruct: death screen visible
+      vi.advanceTimersByTime(2200);
+      const deathScreen = document.getElementById('death-screen');
+      expect(deathScreen.classList.contains('active')).toBe(true);
     });
   });
 

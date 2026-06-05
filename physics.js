@@ -530,8 +530,17 @@ export class PhysicsEngine {
       const zOverlap = shipBox.maxZ > block.minZ && shipBox.minZ < block.maxZ;
 
       if (xOverlap && zOverlap) {
-        // We have X/Z intersection! Let's check Y height
-        if (block.isObstacle) {
+        // Handle ceiling collision bump
+        if (block.isCeiling) {
+          const verticalOverlap = shipBox.maxY > block.minY && shipBox.minY < block.maxY;
+          if (verticalOverlap && this.velocity.y > 0) {
+            this.position.y = block.minY - SHIP_HEIGHT - 0.01;
+            this.velocity.y = 0;
+            shipBox = this.getShipBox();
+          }
+          // Note: we skip standard obstacle checks for ceiling blocks,
+          // but flow through to the landing checks below
+        } else if (block.isObstacle) {
           // If Y overlap exists, check for horizontal collision
           const isBelowTop = shipBox.minY < block.maxY - 0.15;
           const isAboveBottom = shipBox.maxY > block.minY;
@@ -812,6 +821,7 @@ export class KeyboardController {
     this.left = false;
     this.right = false;
     this.jump = false;
+    this.rewind = false;
     this.spacePressed = false;
     this.steerAmount = 0; // Proportional steer amount (-1 to 1) like an analogue stick
 
@@ -829,7 +839,8 @@ export class KeyboardController {
       backward: false,
       left: false,
       right: false,
-      jump: false
+      jump: false,
+      rewind: false
     };
 
     this.mouse = {
@@ -851,6 +862,7 @@ export class KeyboardController {
       left: false,
       right: false,
       jump: false,
+      rewind: false,
       steerAmount: 0,
       cycleCameraPressed: false,
       togglePausePressed: false,
@@ -868,6 +880,7 @@ export class KeyboardController {
       jump: 0,          // A button
       left: 14,         // D-pad Left
       right: 15,        // D-pad Right
+      rewind: 2,        // X button
       cycleCamera: 3,   // Y button
       togglePause: 9    // Start button
     };
@@ -914,6 +927,9 @@ export class KeyboardController {
     if (code === 'ArrowRight' || code === 'KeyD') this.keys.right = isDown;
     if (code === 'Space') {
       this.keys.jump = isDown;
+    }
+    if (code === 'KeyR') {
+      this.keys.rewind = isDown;
     }
     this.updateCombinedState();
   }
@@ -1016,6 +1032,7 @@ export class KeyboardController {
     this.left = this.keys.left || (this.mouseControlsEnabled && this.mouse.left) || (this.touchControlsEnabled && this.touch.left) || this.gamepad.left;
     this.right = this.keys.right || (this.mouseControlsEnabled && this.mouse.right) || (this.touchControlsEnabled && this.touch.right) || this.gamepad.right;
     this.jump = this.keys.jump || (this.mouseControlsEnabled && this.mouse.jump) || (this.touchControlsEnabled && this.touch.jump) || this.gamepad.jump;
+    this.rewind = this.keys.rewind || this.gamepad.rewind;
     this.spacePressed = this.keys.jump || (this.mouseControlsEnabled && this.mouse.jump) || (this.touchControlsEnabled && this.touch.jump) || this.gamepad.jump;
 
     // Steer Amount: prioritize analog gamepad stick, then touch/mouse steer amount
@@ -1090,6 +1107,7 @@ export class KeyboardController {
       this.gamepad.left = false;
       this.gamepad.right = false;
       this.gamepad.jump = false;
+      this.gamepad.rewind = false;
       this.gamepad.steerAmount = 0;
       this.gamepad.cycleCameraPressed = false;
       this.gamepad.togglePausePressed = false;
@@ -1130,6 +1148,7 @@ export class KeyboardController {
     this.gamepad.forward = this._isGamepadPressed(gp, this.gamepadMappings.forward);
     this.gamepad.backward = this._isGamepadPressed(gp, this.gamepadMappings.backward);
     this.gamepad.jump = this._isGamepadPressed(gp, this.gamepadMappings.jump);
+    this.gamepad.rewind = this._isGamepadPressed(gp, this.gamepadMappings.rewind);
 
     const steerLeftVal = this._isGamepadPressed(gp, this.gamepadMappings.left);
     const steerRightVal = this._isGamepadPressed(gp, this.gamepadMappings.right);

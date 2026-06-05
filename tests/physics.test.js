@@ -1413,5 +1413,59 @@ describe('PhysicsEngine', () => {
       window.currentLevelData = null; // Cleanup
     });
   });
+
+  // ── Ceiling Collisions ──────────────────────────────────────────────────
+
+  describe('Ceiling collisions', () => {
+    it('should cap Y position and zero Y velocity when hitting ceiling from below', () => {
+      const ceiling = {
+        minX: -5.0, maxX: 5.0,
+        minZ: -50.0, maxZ: -10.0,
+        minY: 2.0, maxY: 2.15,
+        isObstacle: true,
+        isCeiling: true
+      };
+      levelInfo.collidables = [ceiling];
+
+      // Place ship moving upward and overlapping the ceiling from below
+      // Ship Y = 1.7 (so shipBox: minY = 1.7, maxY = 2.1 which is > ceiling.minY)
+      physics.position.set(0, 1.7, -30);
+      physics.velocity.set(0, 5.0, -10.0);
+      physics.onGround = false;
+
+      physics.update(0.016, keyboard, levelInfo);
+
+      // Expected: Y position capped to ceiling.minY - SHIP_HEIGHT - 0.01 = 2.0 - 0.4 - 0.01 = 1.59
+      expect(physics.position.y).toBeCloseTo(1.59, 2);
+      // Expected: velocity Y zeroed
+      expect(physics.velocity.y).toBe(0.0);
+      // Expected: ship is NOT dead
+      expect(physics.isDead).toBe(false);
+    });
+
+    it('should land on top of the ceiling block if landing from above', () => {
+      const ceiling = {
+        minX: -5.0, maxX: 5.0,
+        minZ: -50.0, maxZ: -10.0,
+        minY: 2.0, maxY: 2.15,
+        isObstacle: true,
+        isCeiling: true
+      };
+      levelInfo.collidables = [ceiling];
+
+      // Place ship just above ceiling top (Y = 2.2) and falling down (velocity Y = -1.0)
+      physics.position.set(0, 2.2, -30);
+      physics.velocity.set(0, -1.0, -10.0);
+      physics.onGround = false;
+
+      physics.update(0.016, keyboard, levelInfo);
+
+      // Expected: snaps to ceiling top (Y = 2.15) and lands
+      expect(physics.position.y).toBeCloseTo(2.15, 2);
+      expect(physics.onGround).toBe(true);
+      expect(physics.velocity.y).toBe(0.0);
+      expect(physics.isDead).toBe(false);
+    });
+  });
 });
 

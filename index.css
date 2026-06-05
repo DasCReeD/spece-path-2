@@ -2738,6 +2738,92 @@ body, html {
   }
 }
 
+/* Glitch scanlines overlay for rewind effect */
+.rewind-glitch-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  pointer-events: none;
+  animation: glitchScan 0.25s infinite;
+}
+
+.rewind-glitch-overlay::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 255, 102, 0.08) 0px,
+    rgba(0, 255, 102, 0.08) 1.5px,
+    transparent 1.5px,
+    transparent 3px
+  );
+  pointer-events: none;
+}
+
+@keyframes glitchScan {
+  0% { opacity: 0.85; }
+  50% { opacity: 0.65; }
+  100% { opacity: 0.85; }
+}
+
+/* VHS Style Rewind Indicator in the Corner */
+.vhs-rewind-indicator {
+  position: absolute;
+  top: 40px;
+  left: 45px;
+  font-family: 'Courier New', Courier, monospace, var(--font-display);
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: #00ff66;
+  text-shadow: 0 0 10px rgba(0, 255, 102, 0.8), 0 0 20px rgba(0, 255, 102, 0.4);
+  letter-spacing: 2px;
+  z-index: 105;
+  pointer-events: none;
+  animation: vhsBlink 0.6s step-end infinite;
+}
+
+@keyframes vhsBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* VHS Dynamic Tracking Glitch Bar Overlay */
+.vhs-tracking-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 104;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.vhs-tracking-line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+  filter: blur(2px);
+  animation: vhsTrack 1.5s linear infinite;
+}
+
+@keyframes vhsTrack {
+  0% { top: -10%; }
+  100% { top: 110%; }
+}
+
 
 
 

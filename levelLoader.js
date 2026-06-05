@@ -146,6 +146,9 @@ function classifyTileBehavior(topColor) {
  * Returns { height, yPos, isObstacle }.
  */
 function computeTileGeometry(tile) {
+  if (tile.tunnel) {
+    return { height: 0.45, yPos: -0.225, isObstacle: false };
+  }
   if (tile.full && tile.half) {
     return { height: 3.0, yPos: 1.5, isObstacle: true };
   }
@@ -242,46 +245,9 @@ function getTileHeight(tile) {
  * immediately preceding an elevated tunnel entrance.
  */
 function preprocessLevelRamps(levelData) {
-  if (!levelData || !levelData.rows) return;
-  const rows = levelData.rows;
-  const numRows = rows.length;
-
-  for (let r = 1; r < numRows; r++) {
-    const row = rows[r];
-    const prevRow = rows[r - 1];
-    if (!row || !prevRow) continue;
-
-    for (let c = 0; c < ROAD_WIDTH_LANES; c++) {
-      const tile = row[c];
-      // A tile is an elevated tunnel if it has tunnel flag AND is full/half block
-      if (tile && tile.tunnel && (tile.full || tile.half)) {
-        const prevTile = prevRow[c];
-        const isPrevTunnelElevated = prevTile && prevTile.tunnel && (prevTile.full || prevTile.half);
-        // Place ramp on the previous tile if it is not already an elevated tunnel
-        if (!isPrevTunnelElevated) {
-          const targetHeight = (tile.full && tile.half) ? 3.0 : (tile.full ? 2.0 : 1.0);
-          const startHeight = getTileHeight(prevTile);
-          if (startHeight < targetHeight) {
-            if (!prevTile) {
-              // Create a new ramp tile
-              prevRow[c] = {
-                ramp: true,
-                startY: startHeight,
-                endY: targetHeight,
-                top_color: tile.top_color,
-                bottom_color: tile.bottom_color,
-              };
-            } else {
-              // Turn existing tile into a ramp
-              prevTile.ramp = true;
-              prevTile.startY = startHeight;
-              prevTile.endY = targetHeight;
-            }
-          }
-        }
-      }
-    }
-  }
+  // Tunnel floors are flat at road level (baseY). They do not have elevated floors,
+  // so we do not generate ramps leading up to them.
+  return;
 }
 
 /**
@@ -1353,17 +1319,26 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
   const totalSpan = rightX - leftX;
   const centerX = (leftX + rightX) / 2;
 
+  const isTestEnv = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') || (typeof window !== 'undefined' && window.__vitest_worker__);
+
   // Determine baseY (tunnel floor elevation) from the first tile in the group
   const firstTile = row && group.length > 0 ? row[group[0]] : null;
-  let baseY = 0;
-  if (firstTile) {
-    if (firstTile.startY !== undefined) baseY = firstTile.startY;
-    else if (firstTile.full && firstTile.half) baseY = 3.0;
-    else if (firstTile.full) baseY = 2.0;
-    else if (firstTile.half) baseY = 1.0;
+  let baseY = 0.0;
+  if (firstTile && firstTile.startY !== undefined) {
+    baseY = firstTile.startY;
   }
 
   const radius = totalSpan / 2; // Perfect dynamic semi-circular radius!
+
+  // Determine archHeight (tunnel ceiling height) from the block flags
+  let archHeight;
+  if (firstTile && (firstTile.full || firstTile.half)) {
+    if (firstTile.full && firstTile.half) archHeight = 3.0;
+    else if (firstTile.full) archHeight = 2.0;
+    else if (firstTile.half) archHeight = 1.0;
+  } else {
+    archHeight = isTestEnv ? 2.8 : radius;
+  }
   const radialSegments = 16;
   const heightSegments = 1;
   const openEnded = true;
@@ -1371,7 +1346,6 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
   const thetaLength = Math.PI;
 
   const tunnelColor = getPaletteColor(palette, 1);
-  const isTestEnv = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') || (typeof window !== 'undefined' && window.__vitest_worker__);
   const themeIndex = getActiveThemeIndex(row ? { level_index: window.currentLevelIndex } : null);
   const theme = THEMES[themeIndex];
   const themeTunnel = theme.behaviors.tunnel || theme.behaviors.default;
@@ -1398,7 +1372,6 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
 
   if (isTestEnv) {
     // Generate traditional left wall, right wall, and ceiling meshes for the unit tests
-    const archHeight = 2.8;
     const archThickness = 0.15;
     const xPos = centerX;
     const yPos = baseY;
@@ -1407,17 +1380,17 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
     const leftWallGeom = new THREE.BoxGeometry(archThickness, archHeight, TILE_LENGTH);
     adjustBoxUVs(leftWallGeom, archThickness, archHeight, TILE_LENGTH);
     const leftWall = new THREE.Mesh(leftWallGeom, tunnelMaterial);
-    leftWall.position.set(xPos - TILE_WIDTH / 2 + archThickness / 2, baseY + archHeight / 2, meshZ);
+    leftWall.position.set(leftX + archThickness / 2, baseY + archHeight / 2, meshZ);
     scene.add(leftWall);
 
     const rightWallGeom = new THREE.BoxGeometry(archThickness, archHeight, TILE_LENGTH);
     adjustBoxUVs(rightWallGeom, archThickness, archHeight, TILE_LENGTH);
     const rightWall = new THREE.Mesh(rightWallGeom, tunnelMaterial);
-    rightWall.position.set(xPos + TILE_WIDTH / 2 - archThickness / 2, baseY + archHeight / 2, meshZ);
+    rightWall.position.set(rightX - archThickness / 2, baseY + archHeight / 2, meshZ);
     scene.add(rightWall);
 
-    const ceilingGeom = new THREE.BoxGeometry(TILE_WIDTH, archThickness, TILE_LENGTH);
-    adjustBoxUVs(ceilingGeom, TILE_WIDTH, archThickness, TILE_LENGTH);
+    const ceilingGeom = new THREE.BoxGeometry(totalSpan, archThickness, TILE_LENGTH);
+    adjustBoxUVs(ceilingGeom, totalSpan, archThickness, TILE_LENGTH);
     const ceiling = new THREE.Mesh(ceilingGeom, tunnelMaterial);
     ceiling.position.set(xPos, baseY + archHeight - archThickness / 2, meshZ);
     scene.add(ceiling);
@@ -1426,8 +1399,8 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
 
     collidables.push(
       {
-        minX: xPos - TILE_WIDTH / 2,
-        maxX: xPos - TILE_WIDTH / 2 + archThickness,
+        minX: leftX,
+        maxX: leftX + archThickness,
         minY: baseY,
         maxY: baseY + archHeight,
         minZ: meshZ - halfL,
@@ -1435,8 +1408,8 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
         isObstacle: true,
       },
       {
-        minX: xPos + TILE_WIDTH / 2 - archThickness,
-        maxX: xPos + TILE_WIDTH / 2,
+        minX: rightX - archThickness,
+        maxX: rightX,
         minY: baseY,
         maxY: baseY + archHeight,
         minZ: meshZ - halfL,
@@ -1444,13 +1417,14 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
         isObstacle: true,
       },
       {
-        minX: xPos - TILE_WIDTH / 2,
-        maxX: xPos + TILE_WIDTH / 2,
+        minX: leftX,
+        maxX: rightX,
         minY: baseY + archHeight - archThickness,
         maxY: baseY + archHeight,
         minZ: meshZ - halfL,
         maxZ: meshZ + halfL,
         isObstacle: true,
+        isCeiling: true,
       }
     );
     return;
@@ -1475,9 +1449,9 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
     const size = new THREE.Vector3();
     box.getSize(size);
 
-    // Scale so width is radius * 2, height is radius, length is TILE_LENGTH
+    // Scale so width is radius * 2, height is archHeight, length is TILE_LENGTH
     const targetWidth = radius * 2;
-    const targetHeight = radius;
+    const targetHeight = archHeight;
     const targetLength = TILE_LENGTH;
 
     const scaleX = size.x > 0 ? (targetWidth / size.x) : 1;
@@ -1499,6 +1473,7 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
     const cylinderGeom = new THREE.CylinderGeometry(radius, radius, TILE_LENGTH, radialSegments, heightSegments, openEnded, thetaStart, thetaLength);
     const fallbackMesh = new THREE.Mesh(cylinderGeom, tunnelMaterial);
     fallbackMesh.rotation.x = Math.PI / 2;
+    fallbackMesh.scale.set(1, 1, archHeight / radius);
     domeMesh.add(fallbackMesh);
   });
 
@@ -1525,11 +1500,11 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
     const ribMesh = new THREE.Mesh(ribGeom, ribMaterial);
     ribMesh.rotation.x = Math.PI / 2;
     ribMesh.position.set(centerX, baseY, meshZ + zOffset);
+    ribMesh.scale.set(1, 1, archHeight / radius);
     scene.add(ribMesh);
     roadMeshes.push(ribMesh);
   }
 
-  const archHeight = radius;
   const archThickness = 0.15;
 
   collidables.push(
@@ -1562,6 +1537,7 @@ function buildMergedTunnel(group, r, palette, scene, collidables, roadMeshes, ro
       minZ: meshZ - halfL,
       maxZ: meshZ + halfL,
       isObstacle: true,
+      isCeiling: true,
     }
   );
 }

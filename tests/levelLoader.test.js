@@ -389,18 +389,22 @@ describe('buildLevel', () => {
       expect(leftWall.material.opacity).toBeCloseTo(0.35, 3);
     });
 
-    it('should combine tunnel collidables with obstacle block collidables', () => {
+    it('should generate tunnel collidables and mark the ceiling as isCeiling', () => {
       const fullBlockWithTunnel = createFullBlockTile(0);
       fullBlockWithTunnel.tunnel = true;
       fullBlockWithTunnel.bottom_color = 1;
       const row = [null, null, null, fullBlockWithTunnel, null, null, null];
       const levelData = createBaseLevelData({ rows: [row] });
       const result = buildLevel(levelData, scene);
-      // Renders both the elevated obstacle block (1) and the tunnel walls (3)
-      expect(result.collidables).toHaveLength(4);
+      // Renders only the tunnel walls and ceiling (3)
+      expect(result.collidables).toHaveLength(3);
+      
+      const ceiling = result.collidables.find(c => c.isCeiling);
+      expect(ceiling).toBeDefined();
+      expect(ceiling.isObstacle).toBe(true);
     });
 
-    it('should dynamically shift tunnel height (baseY) to sit on top of block obstacle', () => {
+    it('should set tunnel ceiling and wall heights dynamically based on half block flag', () => {
       const halfBlockWithTunnel = createHalfBlockTile(0);
       halfBlockWithTunnel.tunnel = true;
       halfBlockWithTunnel.bottom_color = 1;
@@ -408,13 +412,19 @@ describe('buildLevel', () => {
       const levelData = createBaseLevelData({ rows: [row] });
       const result = buildLevel(levelData, scene);
       
-      // Renders the half-block obstacle (1) and the tunnel walls (3)
-      expect(result.collidables).toHaveLength(4);
+      // Renders only the tunnel walls and ceiling (3)
+      expect(result.collidables).toHaveLength(3);
       
-      // Find any tunnel wall collidable and verify it sits at baseY=1.0 (on top of the half block)
-      const tunnelWall = result.collidables.find(c => c.minY !== undefined && c.maxY !== undefined && c.minY > 0.1);
-      expect(tunnelWall).toBeDefined();
-      expect(tunnelWall.minY).toBe(1.0);
+      // Verify the tunnel floor (baseY) remains at 0.0
+      const leftWall = result.collidables[0];
+      expect(leftWall.minY).toBe(0.0);
+      
+      // Verify that archHeight was set to 1.0 (from half block flag)
+      expect(leftWall.maxY).toBe(1.0);
+      
+      const ceiling = result.collidables.find(c => c.isCeiling);
+      expect(ceiling).toBeDefined();
+      expect(ceiling.maxY).toBe(1.0);
     });
 
     it('should dynamically shift tunnel height (baseY) to sit on top of custom-height ramp/road', () => {
