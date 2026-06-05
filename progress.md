@@ -41,16 +41,9 @@
 | 22 | `ad64e20` | ✅ Fix level pack loading stall by importing JSON files as static asset URLs |
 | 23 | `6e3cf67` | ✅ Bottom HUD toggle option, touch joystick vertical axis throttle/brake control |
 | 24 | `adae570` | ✅ Top-right fullscreen toggle button for mobile/desktop |
-| — | `bbc3432` | ✅ Autolane snap toggle and snap strength adjuster |
-
----
-
-## Feature Branch: `feature/visual-ui-overhaul`
-
-| # | Commit | Feature |
-|---|--------|---------|
-| 25 | `6dcbc0a` | ✅ Complete visual UI overhaul, responsive touch controls, asset pipelines |
-| 26 | `4824047` | ✅ Fix continuous ramp frontal collision and add slalom super boosts |
+| 25 | `bbc3432` | ✅ Autolane snap toggle and snap strength adjuster |
+| 26 | `032b3f0` | ✅ Fix continuous ramp frontal collision and add slalom super boosts |
+| 27 | `3e674f9` | ✅ Spawn ship centered on first valid road tile in middle of tile and calculate correct Y elevation |
 
 ### Changes in feature branch (+1 commit vs main):
 - **118 files changed** — 10,749 insertions, 402 deletions
