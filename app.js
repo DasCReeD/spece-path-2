@@ -1585,19 +1585,42 @@ class GameManager {
       }
     }
 
-    // Calculate X from the center of the tiles present in the spawn row
+    // Find the active lane closest to the center lane (3) in the spawn row
     const spawnRowTiles = rows[spawnRow];
-    const tileCols = spawnRowTiles
-      .map((t, c) => t !== null ? c : null)
-      .filter(x => x !== null);
-    const avgCol = tileCols.length > 0
-      ? tileCols.reduce((a, b) => a + b, 0) / tileCols.length
-      : 3; // default center
-    const spawnX = (avgCol - 3) * TILE_WIDTH;
+    let spawnCol = 3; // default center lane
+    let minDistance = Infinity;
+    for (let c = 0; c < spawnRowTiles.length; c++) {
+      if (spawnRowTiles[c] !== null) {
+        const dist = Math.abs(c - 3);
+        if (dist < minDistance) {
+          minDistance = dist;
+          spawnCol = c;
+        }
+      }
+    }
+    const spawnX = (spawnCol - 3) * TILE_WIDTH;
 
-    // Place ship on the first solid row, slightly elevated, adjusted by infiniteZOffset
-    const spawnZ = -spawnRow * TILE_LENGTH + this.infiniteZOffset;
-    this.physics.position.set(spawnX, 0.3, spawnZ);
+    // Calculate the road surface height at the spawn point (in the middle of the tile)
+    const spawnTile = spawnRowTiles[spawnCol];
+    let tileSurfaceY = 0.0;
+    if (spawnTile) {
+      if (spawnTile.ramp) {
+        const sY = spawnTile.startY !== undefined ? spawnTile.startY : 0.0;
+        const eY = spawnTile.endY !== undefined ? spawnTile.endY : 0.0;
+        tileSurfaceY = sY + 0.5 * (eY - sY);
+      } else if (spawnTile.full && spawnTile.half) {
+        tileSurfaceY = 3.0;
+      } else if (spawnTile.full) {
+        tileSurfaceY = 2.0;
+      } else if (spawnTile.half) {
+        tileSurfaceY = 1.0;
+      }
+    }
+    const spawnY = tileSurfaceY + 0.3;
+
+    // Place ship centered in the middle of the first solid tile, slightly elevated, adjusted by infiniteZOffset
+    const spawnZ = -(spawnRow + 0.5) * TILE_LENGTH + this.infiniteZOffset;
+    this.physics.position.set(spawnX, spawnY, spawnZ);
     this.physics.onGround = false;
 
     // 5. Update HUD headers & telemetry, then show HUD and hide overlays
