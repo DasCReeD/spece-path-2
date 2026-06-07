@@ -260,8 +260,13 @@ export class TouchControlManager {
       const h = rect.height || 60;
 
       const pos = this.anchorToCSS(cfg.anchor, cfg.x, cfg.y, w, h);
-      el.style.left = `${pos.left}px`;
-      el.style.top = `${pos.top}px`;
+      
+      // Adjust layout box left/top so visual box is at pos.left/pos.top
+      const layoutLeft = pos.left - el.offsetWidth / 2 + w / 2;
+      const layoutTop = pos.top - el.offsetHeight / 2 + h / 2;
+
+      el.style.left = `${layoutLeft}px`;
+      el.style.top = `${layoutTop}px`;
     }
 
     this.applySteerTypeVisibility();
@@ -481,7 +486,12 @@ export class TouchControlManager {
         dy = dy / dist * maxDist;
       }
 
-      joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      // Divide by active steer scale to offset knob centering drift
+      const scale = (this.config && this.config.buttons && this.config.buttons['steer'] && this.config.buttons['steer'].scale) || 1.0;
+      const localDx = dx / scale;
+      const localDy = dy / scale;
+
+      joystickKnob.style.transform = `translate(calc(-50% + ${localDx}px), calc(-50% + ${localDy}px))`;
 
       // Normalise to -1..1
       const normX = dx / maxDist;
@@ -531,6 +541,11 @@ export class TouchControlManager {
     this.bindScaleButtons();
     this.bindResetButton();
     this.bindDoneButton();
+
+    // Bind dragging handlers exactly once during initialization
+    for (const [touchId, btnInfo] of this.buttons) {
+      this.makeButtonDraggable(touchId, btnInfo.element);
+    }
   }
 
   /** Toggle customise mode via the pencil/check button. */
@@ -632,10 +647,12 @@ export class TouchControlManager {
     if (overlay) overlay.classList.remove('hidden');
 
     const editBtn = document.getElementById('touch-btn-edit');
-    if (editBtn) editBtn.textContent = '✅';
-
-    for (const [touchId, btnInfo] of this.buttons) {
-      this.makeButtonDraggable(touchId, btnInfo.element);
+    if (editBtn) {
+      editBtn.innerHTML = `
+        <svg class="touch-icon" viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      `;
     }
   }
 
@@ -649,7 +666,14 @@ export class TouchControlManager {
     if (overlay) overlay.classList.add('hidden');
 
     const editBtn = document.getElementById('touch-btn-edit');
-    if (editBtn) editBtn.textContent = '✏️';
+    if (editBtn) {
+      editBtn.innerHTML = `
+        <svg class="touch-icon" viewBox="0 0 24 24">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+      `;
+    }
 
     // Clear visual selection from all buttons
     for (const [, btnInfo] of this.buttons) {
@@ -681,6 +705,11 @@ export class TouchControlManager {
       dragPointerId = e.pointerId;
       el.setPointerCapture(e.pointerId);
 
+      // Add dragging-active class to hudElement to isolate other buttons
+      if (this.hudElement) {
+        this.hudElement.classList.add('dragging-active');
+      }
+
       // Select this button (isolate it visually)
       this.activeButtonId = touchId;
       for (const [id, btn] of this.buttons) {
@@ -700,9 +729,21 @@ export class TouchControlManager {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
 
-      // Clamp to viewport bounds
-      const newLeft = Math.max(0, Math.min(window.innerWidth - el.offsetWidth, origLeft + dx));
-      const newTop = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, origTop + dy));
+      const rect = el.getBoundingClientRect();
+      const w = rect.width || el.offsetWidth;
+      const h = rect.height || el.offsetHeight;
+
+      // Calculate original visual left/top from layout coordinates
+      const origVLeft = origLeft + el.offsetWidth / 2 - w / 2;
+      const origVTop = origTop + el.offsetHeight / 2 - h / 2;
+
+      // Clamped visual left/top within viewport
+      const newVLeft = Math.max(0, Math.min(window.innerWidth - w, origVLeft + dx));
+      const newVTop = Math.max(0, Math.min(window.innerHeight - h, origVTop + dy));
+
+      // Translate back to layout coordinates
+      const newLeft = newVLeft - el.offsetWidth / 2 + w / 2;
+      const newTop = newVTop - el.offsetHeight / 2 + h / 2;
 
       el.style.left = `${newLeft}px`;
       el.style.top = `${newTop}px`;
@@ -713,12 +754,25 @@ export class TouchControlManager {
       dragging = false;
       dragPointerId = null;
 
+      // Remove dragging-active class
+      if (this.hudElement) {
+        this.hudElement.classList.remove('dragging-active');
+      }
+
       // Persist new position as anchor-relative offsets
       const cfg = this.config.buttons[touchId];
       if (cfg) {
+        const rect = el.getBoundingClientRect();
+        const w = rect.width || el.offsetWidth;
+        const h = rect.height || el.offsetHeight;
+
+        // Calculate visual left/top
+        const vLeft = el.offsetLeft + el.offsetWidth / 2 - w / 2;
+        const vTop = el.offsetTop + el.offsetHeight / 2 - h / 2;
+
         const pos = this.cssToAnchor(
-          cfg.anchor, el.offsetLeft, el.offsetTop,
-          el.offsetWidth, el.offsetHeight
+          cfg.anchor, vLeft, vTop,
+          w, h
         );
         cfg.x = pos.x;
         cfg.y = pos.y;
