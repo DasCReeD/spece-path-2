@@ -26,10 +26,16 @@
 17. [index.css — Design System](#indexcss)
 18. [vite.config.js — Build Config](#viteconfigjs)
 19. [package.json — Project Metadata](#packagejson)
-20. [Cross-Module Dependency Graph](#cross-module-dependency-graph)
-21. [Theme System](#theme-system)
-22. [Asset Structure](#asset-structure)
-23. [Data Files](#data-files)
+20. [editor.html — Editor UI Structure](#editorhtml-1)
+21. [editor.css — Editor Design System](#editorcss-1)
+22. [editor.js — Editor Manager](#editorjs-1)
+23. [editorRenderer.js — Editor Viewport Renderer](#editorrendererjs-1)
+24. [editorState.js — Editor Document State](#editorstatejs-1)
+25. [editorCommands.js — Editor Commands](#editorcommandsjs-1)
+26. [Cross-Module Dependency Graph](#cross-module-dependency-graph)
+27. [Theme System](#theme-system)
+28. [Asset Structure](#asset-structure)
+29. [Data Files](#data-files)
 
 ---
 
@@ -37,23 +43,29 @@
 
 | File | Size | Lines (approx) | Purpose |
 |------|------|-----------------|---------|
-| [app.js](file:///c:/dev/Sky%20roads/app.js) | 111 KB | ~2,797 | GameManager — state machine, UI, game loop, input, garage, settings |
-| [graphics.js](file:///c:/dev/Sky%20roads/graphics.js) | 93 KB | ~1,800 | Three.js rendering, particles, skybox, theming, ship models |
-| [levelLoader.js](file:///c:/dev/Sky%20roads/levelLoader.js) | 88 KB | ~2,200 | Level geometry builder, themed textures, async building |
-| [index.css](file:///c:/dev/Sky%20roads/index.css) | 78 KB | ~3,145 | Retro-futuristic glassmorphism design system |
-| [index.html](file:///c:/dev/Sky%20roads/index.html) | 61 KB | ~967 | Full game UI — menus, HUD, settings, garage, touch controls |
-| [worldBuilder.js](file:///c:/dev/Sky%20roads/worldBuilder.js) | 50 KB | ~1,695 | Procedural level generation (standalone Node.js CLI) |
-| [physics.js](file:///c:/dev/Sky%20roads/physics.js) | 46 KB | ~1,050 | Physics engine, collision detection, keyboard/gamepad controller |
-| [audio.js](file:///c:/dev/Sky%20roads/audio.js) | 41 KB | ~1,281 | Web Audio API synthesizer, music sequencer, SFX |
-| [cockpitConsole.js](file:///c:/dev/Sky%20roads/cockpitConsole.js) | 35 KB | ~400 | 3D cockpit dashboard HUD + path scanner minimap |
-| [touchControls.js](file:///c:/dev/Sky%20roads/touchControls.js) | 24 KB | ~752 | Touch input manager — individual button system |
-| [preview.js](file:///c:/dev/Sky%20roads/preview.js) | 23 KB | ~600 | Ship garage preview engine (isolated Three.js scene) |
-| [oplSynth.js](file:///c:/dev/Sky%20roads/oplSynth.js) | 19 KB | ~637 | OPL2 FM synthesis (Yamaha YM3812) + LZS decompressor |
-| [generate_textures.js](file:///c:/dev/Sky%20roads/generate_textures.js) | 18 KB | ~511 | Procedural PNG texture generator (standalone Node.js) |
-| [debug_coords.js](file:///c:/dev/Sky%20roads/debug_coords.js) | 7 KB | ~220 | Puppeteer-based UI debug automation script |
-| [levels.js](file:///c:/dev/Sky%20roads/levels.js) | 2 KB | ~78 | Level pack fetch + cache loader |
-| [vitest.setup.js](file:///c:/dev/Sky%20roads/vitest.setup.js) | 4 KB | ~103 | Test harness — asset stub generation + Python runners |
-| [vite.config.js](file:///c:/dev/Sky%20roads/vite.config.js) | <1 KB | ~20 | Build + test configuration |
+| [app.js](../app.js) | 111 KB | ~2,797 | GameManager — state machine, UI, game loop, input, garage, settings |
+| [graphics.js](../graphics.js) | 93 KB | ~1,800 | Three.js rendering, particles, skybox, theming, ship models |
+| [levelLoader.js](../levelLoader.js) | 88 KB | ~2,200 | Level geometry builder, themed textures, async building |
+| [index.css](../index.css) | 78 KB | ~3,145 | Retro-futuristic glassmorphism design system |
+| [editor.js](../editor.js) | 65 KB | ~1,600 | Level Editor — page orchestrator, UI listeners, customizer |
+| [index.html](../index.html) | 61 KB | ~967 | Full game UI — menus, HUD, settings, garage, touch controls |
+| [worldBuilder.js](../worldBuilder.js) | 50 KB | ~1,695 | Procedural level generation (standalone Node.js CLI) |
+| [physics.js](../physics.js) | 46 KB | ~1,050 | Physics engine, collision detection, keyboard/gamepad controller |
+| [audio.js](../audio.js) | 41 KB | ~1,281 | Web Audio API synthesizer, music sequencer, SFX |
+| [editorRenderer.js](../editorRenderer.js) | 35 KB | ~900 | 3D + 2D orthogonal camera layout viewports renderer |
+| [cockpitConsole.js](../cockpitConsole.js) | 35 KB | ~400 | 3D cockpit dashboard HUD + path scanner minimap |
+| [editor.html](../editor.html) | 27 KB | ~750 | Editor UI Structure — viewport layouts, controls sidebar |
+| [editor.css](../editor.css) | 25 KB | ~850 | Editor Design System — glassmorphic sidebar, multi-viewport split |
+| [touchControls.js](../touchControls.js) | 24 KB | ~752 | Touch input manager — individual button system |
+| [preview.js](../preview.js) | 23 KB | ~600 | Ship garage preview engine (isolated Three.js scene) |
+| [oplSynth.js](../oplSynth.js) | 19 KB | ~637 | OPL2 FM synthesis (Yamaha YM3812) + LZS decompressor |
+| [generate_textures.js](../generate_textures.js) | 18 KB | ~511 | Procedural PNG texture generator (standalone Node.js) |
+| [editorState.js](../editorState.js) | 17 KB | ~450 | Editor document state, undo/redo manager, level translation |
+| [debug_coords.js](../debug_coords.js) | 7 KB | ~220 | Puppeteer-based UI debug automation script |
+| [editorCommands.js](../editorCommands.js) | 6 KB | ~200 | Drawing, Fill, Marquee and Resize command implementations |
+| [levels.js](../levels.js) | 2 KB | ~78 | Level pack fetch + cache loader |
+| [vitest.setup.js](../vitest.setup.js) | 4 KB | ~103 | Test harness — asset stub generation + Python runners |
+| [vite.config.js](../vite.config.js) | <1 KB | ~20 | Build + test configuration |
 
 ---
 
@@ -84,13 +96,13 @@
 | `SKIN_DETAILS` | const object | Display names and descriptions for ship skins |
 
 **Dependencies:**
-- [levels.js](file:///c:/dev/Sky%20roads/levels.js) → `loadLevelPack`, `getCachedPack`
-- [graphics.js](file:///c:/dev/Sky%20roads/graphics.js) → `GraphicsEngine`
-- [physics.js](file:///c:/dev/Sky%20roads/physics.js) → `PhysicsEngine`, `KeyboardController`, `SHIP_LENGTH`
-- [levelLoader.js](file:///c:/dev/Sky%20roads/levelLoader.js) → `buildLevelAsync`, `disposeUnusedThemes`, `getActiveThemeIndex`
-- [audio.js](file:///c:/dev/Sky%20roads/audio.js) → `gameAudio`
-- [preview.js](file:///c:/dev/Sky%20roads/preview.js) → `ShipPreviewEngine`
-- [touchControls.js](file:///c:/dev/Sky%20roads/touchControls.js) → `TouchControlManager`
+- [levels.js](../levels.js) → `loadLevelPack`, `getCachedPack`
+- [graphics.js](../graphics.js) → `GraphicsEngine`
+- [physics.js](../physics.js) → `PhysicsEngine`, `KeyboardController`, `SHIP_LENGTH`
+- [levelLoader.js](../levelLoader.js) → `buildLevelAsync`, `disposeUnusedThemes`, `getActiveThemeIndex`
+- [audio.js](../audio.js) → `gameAudio`
+- [preview.js](../preview.js) → `ShipPreviewEngine`
+- [touchControls.js](../touchControls.js) → `TouchControlManager`
 - `three` (npm)
 
 ---
@@ -121,9 +133,9 @@
 
 **Dependencies:**
 - `three` (+ OBJLoader, FBXLoader, GLTFLoader)
-- [physics.js](file:///c:/dev/Sky%20roads/physics.js) → `SHIP_WIDTH`, `SHIP_HEIGHT`, `SHIP_LENGTH`
-- [cockpitConsole.js](file:///c:/dev/Sky%20roads/cockpitConsole.js) → `CockpitConsole3D`
-- [levelLoader.js](file:///c:/dev/Sky%20roads/levelLoader.js) → `getLevelObjUrl`, `getLevelAssetUrl`, `getActiveThemeIndex`, `THEMES`
+- [physics.js](../physics.js) → `SHIP_WIDTH`, `SHIP_HEIGHT`, `SHIP_LENGTH`
+- [cockpitConsole.js](../cockpitConsole.js) → `CockpitConsole3D`
+- [levelLoader.js](../levelLoader.js) → `getLevelObjUrl`, `getLevelAssetUrl`, `getActiveThemeIndex`, `THEMES`
 - Static assets: ship textures (`.jpg`), hull/road textures (`.png`), cockpit images (`.jfif`), skybox GLTF
 
 ---
@@ -209,7 +221,7 @@
 
 **Dependencies:**
 - `fs`, `path` (Node.js builtins)
-- [data/level_patterns.json](file:///c:/dev/Sky%20roads/data/level_patterns.json) (loaded at startup)
+- [data/level_patterns.json](../data/level_patterns.json) (loaded at startup)
 
 ---
 
@@ -233,7 +245,7 @@
 | `.nextTrack()` | method | Cycle available music tracks |
 
 **Dependencies:**
-- [oplSynth.js](file:///c:/dev/Sky%20roads/oplSynth.js) → `muzaxUrl`, `sfxUrl`, `introUrl`, `parseMuzax`, `parseSfx`, `OplSynthJS`, `MuzaxPlayerJS`
+- [oplSynth.js](../oplSynth.js) → `muzaxUrl`, `sfxUrl`, `introUrl`, `parseMuzax`, `parseSfx`, `OplSynthJS`, `MuzaxPlayerJS`
 
 ---
 
@@ -254,7 +266,7 @@
 
 **Dependencies:**
 - `three`
-- [levelLoader.js](file:///c:/dev/Sky%20roads/levelLoader.js) → `TILE_WIDTH`, `TILE_LENGTH`, `ROAD_WIDTH_LANES`, `TOTAL_ROAD_WIDTH`
+- [levelLoader.js](../levelLoader.js) → `TILE_WIDTH`, `TILE_LENGTH`, `ROAD_WIDTH_LANES`, `TOTAL_ROAD_WIDTH`
 
 ---
 
@@ -328,9 +340,9 @@
 | `LEVEL_PACKS` | const object | Internal pack cache reference |
 
 **Dependencies:**
-- [data/standard_levels.json](file:///c:/dev/Sky%20roads/data/standard_levels.json) (via Vite `?url`)
-- [data/xmas_levels.json](file:///c:/dev/Sky%20roads/data/xmas_levels.json) (via Vite `?url`)
-- [data/generated_levels.json](file:///c:/dev/Sky%20roads/data/generated_levels.json) (via Vite `?url`)
+- [data/standard_levels.json](../data/standard_levels.json) (via Vite `?url`)
+- [data/xmas_levels.json](../data/xmas_levels.json) (via Vite `?url`)
+- [data/generated_levels.json](../data/generated_levels.json) (via Vite `?url`)
 
 ---
 
@@ -371,9 +383,9 @@
 - `#touch-customizer-overlay` — Customizer toolbar
 
 **Dependencies:**
-- [physics.js](file:///c:/dev/Sky%20roads/physics.js) → `KeyboardController` (via constructor injection)
-- [graphics.js](file:///c:/dev/Sky%20roads/graphics.js) → `GraphicsEngine` (via constructor injection)
-- [app.js](file:///c:/dev/Sky%20roads/app.js) → `GameManager` (via constructor injection, for `toggleSettingsMenu`)
+- [physics.js](../physics.js) → `KeyboardController` (via constructor injection)
+- [graphics.js](../graphics.js) → `GraphicsEngine` (via constructor injection)
+- [app.js](../app.js) → `GameManager` (via constructor injection, for `toggleSettingsMenu`)
 
 ---
 
@@ -540,6 +552,75 @@ export default defineConfig({
 
 ---
 
+## editor.html
+
+**Purpose:** Layout structure for the Level Editor. Splits the screen into a left-side toolbox/controls panel and a right-side multi-viewport canvas grid (3D perspective viewport + Top, Front, Side orthogonal viewports).
+
+**DOM Elements Expected:**
+- `#viewport-container` — Holds the four viewport canvas elements.
+- `#editor-toolbox` — Left sidebar for presets, options, commands, and layer configs.
+- `#editor-status-bar` — Bottom stats bar showing loaded levels, active tools, selection sizes, and cursor grids.
+
+---
+
+## editor.css
+
+**Purpose:** Stylesheets for the Level Editor page. Provides layout constraints for the 2x2 grid container of viewports, styling for custom scrollbars, tool sliders, overlay widgets, and active state indicators for toolbox buttons.
+
+---
+
+## editor.js
+
+**Purpose:** Central coordinator for the Level Editor. Exposes the `EditorManager` class which binds all document elements, runs viewport canvas resizing listeners, listens to mouse coordinate drag/drops, handles file loading/uploading dialogs, and coordinates the playtest integration mode.
+
+**Stats:** ~1,600 lines · 65 KB
+
+**Exports:** `EditorManager` (attached to `window.editorInstance`)
+
+**Dependencies:**
+- [editorState.js](../editorState.js) → `EditorState`
+- [editorRenderer.js](../editorRenderer.js) → `EditorRenderer`
+- [editorCommands.js](../editorCommands.js) → command classes (`DrawCellCommand`, `EraseCellCommand`, `FillCellsCommand`, `ResizeGridCommand`, etc.)
+
+---
+
+## editorRenderer.js
+
+**Purpose:** WebGL scene manager for the Level Editor. Exposes the `EditorRenderer` class which constructs four orthographic and perspective cameras, sets up lighting, builds visual guides (helper grids, view limits, and axis lines), and transforms cell states into Three.js geometries using the system themes.
+
+**Stats:** ~900 lines · 35 KB
+
+**Exports:** `EditorRenderer`
+
+**Dependencies:**
+- `three`
+- [levelLoader.js](../levelLoader.js) → `THEMES`, `getActiveThemeIndex`
+
+---
+
+## editorState.js
+
+**Purpose:** Document model representing the active edited track. Manages current selection bounding boxes, active layer views, undo/redo stacks, and provides a translation parser between editor-native JSON files and game-cooked LZS/JSON level schemas.
+
+**Stats:** ~450 lines · 17 KB
+
+**Exports:** `EditorState`
+
+**Dependencies:**
+- [levelLoader.js](../levelLoader.js) → `TILE_WIDTH`, `TILE_LENGTH`
+
+---
+
+## editorCommands.js
+
+**Purpose:** Standard implementation of the Command Pattern for editor mutations. Keeps undo and redo stacks clean by wrapping grid modifications (like pen drawings, fills, selections, or grid resizing) in execute/undo boundaries.
+
+**Stats:** ~200 lines · 6 KB
+
+**Exports:** `DrawCellCommand`, `EraseCellCommand`, `FillCellsCommand`, `ResizeGridCommand`, `SelectionCommand`
+
+---
+
 ## Cross-Module Dependency Graph
 
 ```mermaid
@@ -574,6 +655,13 @@ graph TD
     LVL -->|"fetch JSON"| DATA["data/*.json"]
     LL -->|"import textures"| ASSETS["assets/custom/*.png"]
     GFX -->|"load models"| MODELS["assets/models/*.obj"]
+
+    subgraph "Level Editor Module"
+        ED["editor.js<br/>EditorManager"] --> EDR["editorRenderer.js"]
+        ED --> EDS["editorState.js"]
+        EDS --> EDC["editorCommands.js"]
+        EDS -->|"uses cooked parser"| LL
+    end
 
     subgraph "Standalone CLI Scripts"
         WB["worldBuilder.js"] -->|"reads"| DATA
@@ -636,7 +724,7 @@ assets/
 
 | File | Size | Description |
 |------|------|-------------|
-| [standard_levels.json](file:///c:/dev/Sky%20roads/data/standard_levels.json) | 3.5 MB | 31 standard levels from original DOS SkyRoads |
-| [xmas_levels.json](file:///c:/dev/Sky%20roads/data/xmas_levels.json) | 2.2 MB | 31 Christmas Special levels |
-| [generated_levels.json](file:///c:/dev/Sky%20roads/data/generated_levels.json) | 3.2 MB | 30 procedurally generated levels (index 61–90) |
-| [level_patterns.json](file:///c:/dev/Sky%20roads/data/level_patterns.json) | 52 KB | Extracted statistical patterns from original levels |
+| [standard_levels.json](../data/standard_levels.json) | 3.5 MB | 31 standard levels from original DOS SkyRoads |
+| [xmas_levels.json](../data/xmas_levels.json) | 2.2 MB | 31 Christmas Special levels |
+| [generated_levels.json](../data/generated_levels.json) | 3.2 MB | 30 procedurally generated levels (index 61–90) |
+| [level_patterns.json](../data/level_patterns.json) | 52 KB | Extracted statistical patterns from original levels |

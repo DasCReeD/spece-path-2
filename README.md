@@ -3,17 +3,19 @@
 A modern WebGL recreation of the classic 1993 DOS game **SkyRoads** by BlueMoon Interactive, rebuilt with Three.js, authentic OPL2 FM audio, and full mobile support.
 
 **[▶ Play Live Demo](https://dascreed.github.io/space-paths/)**
+**[🛠️ Open Level Editor](https://dascreed.github.io/space-paths/editor.html)**
 
 ---
 
 ## Features
 
-### 🎮 Gameplay
+### 🎮 Gameplay & Level Editor
 - Faithful recreation of all 10 worlds from the original SkyRoads
 - SkyRoads Xmas Special level pack included
 - 30 procedurally generated levels (worlds 61–90) validated by a physics solver
 - Sloped ramps with physics snapping and smooth tunnel transitions
 - 6 tile effects: boost, slow, sticky, slippery, explosive, refill
+- **🛠️ Integrated Level Editor:** Fully interactive 3D and 2D orthogonal editing viewports (Top, Front, Side views), 6 specialized drawing tools (Pen, Line, Fill, Marquee selection, Ramp-line, and Decal), gridlines for precise block alignment, dynamic track resizing (length/rows adjustments), and load/save support for both editor draft JSONs and compiled game levels.
 
 ### 🚢 Ships & Garage
 - 6 ship classes with unique physics: Original, Fighter, Scout, Hauler, Dreadnought, Cruiser
@@ -42,9 +44,10 @@ A modern WebGL recreation of the classic 1993 DOS game **SkyRoads** by BlueMoon 
 - Autolane magnetic snapping for mobile
 - Fullscreen mode
 
-### 🔧 Developer Tools
+### 🔧 Developer & Automation Tools
 - Automated visual playtest pipeline (Puppeteer screenshots)
-- 20 test files with comprehensive coverage (Vitest + jsdom)
+- 25 test files with comprehensive coverage (Vitest + jsdom + Playwright)
+- Real-time diagnostic hooks and events (`window.__editorDebug`) for visual and testing automation
 - ComfyUI/Trellis2 asset generation pipeline
 - GitHub Pages auto-deployment
 
@@ -102,16 +105,20 @@ npm run build
 | Module | Size | Responsibility |
 |--------|------|----------------|
 | [app.js](docs/module-map.md#appjs) | 111 KB | GameManager — state machine, UI, game loop |
-| [graphics.js](docs/docs/module-map.md#graphicsjs) | 93 KB | Three.js rendering, particles, skybox |
+| [graphics.js](docs/module-map.md#graphicsjs) | 93 KB | Three.js rendering, particles, skybox |
 | [levelLoader.js](docs/module-map.md#levelloaderjs) | 88 KB | Level geometry builder, themed textures |
+| [editor.js](docs/module-map.md#editorjs) | 65 KB | Level Editor — page orchestrator, UI listeners, customizer |
 | [worldBuilder.js](docs/module-map.md#worldbuilderjs) | 50 KB | Procedural level generation |
 | [physics.js](docs/module-map.md#physicsjs) | 42 KB | Physics engine, ship classes |
 | [audio.js](docs/module-map.md#audiojs) | 41 KB | Audio system, OPL2 FM synthesis |
+| [editorRenderer.js](docs/module-map.md#editorrendererjs) | 35 KB | 3D + 2D orthogonal camera layout viewports renderer |
 | [cockpitConsole.js](docs/module-map.md#cockpitconsolejs) | 35 KB | 3D cockpit HUD, minimap |
 | [touchControls.js](docs/module-map.md#touchcontrolsjs) | 24 KB | Touch input manager — individual button system |
 | [preview.js](docs/module-map.md#previewjs) | 23 KB | Ship garage preview |
 | [oplSynth.js](docs/module-map.md#oplsynthjs) | 19 KB | OPL2 FM synthesis engine |
 | [generate_textures.js](docs/module-map.md#generate_texturesjs) | 18 KB | Procedural texture generation |
+| [editorState.js](docs/module-map.md#editorstatejs) | 17 KB | Editor document state, undo/redo manager, level translation |
+| [editorCommands.js](docs/module-map.md#editorcommandsjs) | 6 KB | Drawing, Fill, Marquee and Resize command implementations |
 
 ```mermaid
 graph TD
@@ -125,6 +132,13 @@ graph TD
     GFX --> CC["cockpitConsole.js"]
     GFX --> LL
     AUD --> OPL["oplSynth.js"]
+
+    subgraph "Level Editor Module"
+        ED["editor.js<br/>EditorManager"] --> EDR["editorRenderer.js"]
+        ED --> EDS["editorState.js"]
+        EDS --> EDC["editorCommands.js"]
+        EDS -->|"uses cooked parser"| LL
+    end
 ```
 
 ---
