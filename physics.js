@@ -191,6 +191,7 @@ export class PhysicsEngine {
     this.triggerRefillAudio = false;
     this.triggerWallCollisionAudio = false;
     this.triggerLandingReboundAudio = false;
+    this.triggerJumpAudio = false;
   }
 
   update(dt, keyboard, levelInfo) {
@@ -377,6 +378,7 @@ export class PhysicsEngine {
       this.onGround = false;
       this.isRebounding = false;
       this.justRebounded = false;
+      this.triggerJumpAudio = true;
       keyboard.resetJump(); // Avoid double jumping immediately
     }
 

@@ -2311,6 +2311,11 @@ class GameManager {
         this.physics.triggerLandingReboundAudio = false;
       }
 
+      if (this.physics.triggerJumpAudio) {
+        gameAudio.playJump();
+        this.physics.triggerJumpAudio = false;
+      }
+
       // Gentle thruster puff whoosh sound when player initiates steering
       const isSteering = this.keyboard.left || this.keyboard.right;
       if (isSteering && !this.wasSteeringLastFrame) {

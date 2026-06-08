@@ -329,8 +329,8 @@ describe('AudioSynthesizer', () => {
     it('should create oscillator with triangle wave', () => {
       gameAudio.playJump();
       const osc = mockCtxInstance.createOscillator.mock.results[0].value;
-      expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(120, expect.any(Number));
-      expect(osc.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(450, expect.any(Number));
+      expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(180, expect.any(Number));
+      expect(osc.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(750, expect.any(Number));
     });
 
     it('should start and schedule stop', () => {
@@ -388,8 +388,8 @@ describe('AudioSynthesizer', () => {
     it('should create sawtooth oscillator sweep', () => {
       gameAudio.playBoost();
       const osc = mockCtxInstance.createOscillator.mock.results[0].value;
-      expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(200, expect.any(Number));
-      expect(osc.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(800, expect.any(Number));
+      expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(150, expect.any(Number));
+      expect(osc.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(1800, expect.any(Number));
     });
 
     it('should start and schedule stop', () => {

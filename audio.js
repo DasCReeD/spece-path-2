@@ -696,28 +696,29 @@ class AudioSynthesizer {
     }
 
     try {
-      // We combine three oscillators to get a rich retro engine roar (saw, triangle, detuned saw chorus)
+      // Futuristic fusion turbine: we combine a sub-bass core, a warm sine hum, and a detuned triangle whine.
+      // We pass them through a highly resonant lowpass filter to create a whistling turbine sweep.
       this.engineOsc1 = this.ctx.createOscillator();
       this.engineOsc2 = this.ctx.createOscillator();
       this.engineOsc3 = this.ctx.createOscillator();
       this.engineFilter = this.ctx.createBiquadFilter();
       this.engineGain = this.ctx.createGain();
 
-      this.engineOsc1.type = "sawtooth";
-      this.engineOsc1.frequency.setValueAtTime(35, this.ctx.currentTime); // Low rumble
+      this.engineOsc1.type = "triangle";
+      this.engineOsc1.frequency.setValueAtTime(55, this.ctx.currentTime); // Deep fusion core rumble
       
-      this.engineOsc2.type = "triangle";
-      this.engineOsc2.frequency.setValueAtTime(70, this.ctx.currentTime); // Mid warm growl
+      this.engineOsc2.type = "sine";
+      this.engineOsc2.frequency.setValueAtTime(110, this.ctx.currentTime); // Stable sci-fi energy hum
 
-      this.engineOsc3.type = "sawtooth";
-      this.engineOsc3.frequency.setValueAtTime(105.5, this.ctx.currentTime); // Detuned high whine for rich phasing chorus
+      this.engineOsc3.type = "triangle";
+      this.engineOsc3.frequency.setValueAtTime(165.5, this.ctx.currentTime); // Whining upper harmonics detune
 
-      // Resonant lowpass filter to shape the turbine sound
+      // High-resonance filter to enable whistling wind-like sweeps
       this.engineFilter.type = "lowpass";
-      this.engineFilter.Q.setValueAtTime(3.0, this.ctx.currentTime); // Dynamic whistling peak
-      this.engineFilter.frequency.setValueAtTime(250, this.ctx.currentTime);
+      this.engineFilter.Q.setValueAtTime(7.0, this.ctx.currentTime); // Whistling peak
+      this.engineFilter.frequency.setValueAtTime(300, this.ctx.currentTime);
 
-      this.engineGain.gain.setValueAtTime(0.025, this.ctx.currentTime);
+      this.engineGain.gain.setValueAtTime(0.02, this.ctx.currentTime);
 
       this.engineOsc1.connect(this.engineFilter);
       this.engineOsc2.connect(this.engineFilter);
@@ -761,10 +762,10 @@ class AudioSynthesizer {
       return;
     }
 
-    const targetFreq1 = 35 + ratio * 55; // 35Hz to 90Hz
-    const targetFreq2 = 70 + ratio * 110; // 70Hz to 180Hz
-    const targetFreq3 = 105.5 + ratio * 165; // 105.5Hz to 270.5Hz
-    const targetFilterFreq = 220 + ratio * 650; // 220Hz to 870Hz lowpass sweep
+    const targetFreq1 = 55 + ratio * 75; // 55Hz to 130Hz
+    const targetFreq2 = 110 + ratio * 150; // 110Hz to 260Hz
+    const targetFreq3 = 165.5 + ratio * 225; // 165.5Hz to 390.5Hz
+    const targetFilterFreq = 300 + ratio * 1700; // 300Hz to 2000Hz (resonant sweep)
     
     // Smooth frequency change over 80ms
     this.engineOsc1.frequency.setTargetAtTime(targetFreq1, this.ctx.currentTime, 0.08);
@@ -773,7 +774,7 @@ class AudioSynthesizer {
     this.engineFilter.frequency.setTargetAtTime(targetFilterFreq, this.ctx.currentTime, 0.08);
     
     // Slight volume modulation based on speed
-    this.engineGain.gain.setTargetAtTime(0.018 + ratio * 0.018, this.ctx.currentTime, 0.08);
+    this.engineGain.gain.setTargetAtTime(0.012 + ratio * 0.015, this.ctx.currentTime, 0.08);
   }
 
   // Stop engine hum
@@ -815,21 +816,53 @@ class AudioSynthesizer {
       return;
     }
     
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(120, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(450, this.ctx.currentTime + 0.25);
-    
-    gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
-    
-    osc.connect(gain);
-    this.connectSfxNode(gain);
-    
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.25);
+    try {
+      const time = this.ctx.currentTime;
+
+      // 1. High-speed laser pitch sweep (triangle)
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(180, time);
+      osc.frequency.exponentialRampToValueAtTime(750, time + 0.2);
+      
+      gain.gain.setValueAtTime(0.08, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+      
+      osc.connect(gain);
+      this.connectSfxNode(gain);
+      osc.start(time);
+      osc.stop(time + 0.2);
+
+      // 2. Air thruster launch pop (noise burst)
+      const bufferSize = this.ctx.sampleRate * 0.05; // 0.05 seconds
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(600, time);
+      filter.Q.setValueAtTime(5.0, time);
+
+      const gainNoise = this.ctx.createGain();
+      gainNoise.gain.setValueAtTime(0.12, time);
+      gainNoise.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+
+      noise.connect(filter);
+      filter.connect(gainNoise);
+      this.connectSfxNode(gainNoise);
+
+      noise.start(time);
+      noise.stop(time + 0.05);
+    } catch (e) {
+      console.warn("Failed to play synth jump sound:", e);
+    }
   }
 
   // Play fuel/oxygen refill sound
@@ -915,21 +948,63 @@ class AudioSynthesizer {
       return;
     }
     
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.4);
-    
-    gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
-    
-    osc.connect(gain);
-    this.connectSfxNode(gain);
-    
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.4);
+    try {
+      const time = this.ctx.currentTime;
+
+      // 1. High-frequency pitch sweep (charge up)
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const gainOsc = this.ctx.createGain();
+
+      osc1.type = "sawtooth";
+      osc1.frequency.setValueAtTime(150, time);
+      osc1.frequency.exponentialRampToValueAtTime(1800, time + 0.5);
+
+      osc2.type = "triangle";
+      osc2.frequency.setValueAtTime(154, time); // detuned
+      osc2.frequency.exponentialRampToValueAtTime(1810, time + 0.5);
+
+      gainOsc.gain.setValueAtTime(0.05, time);
+      gainOsc.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+
+      osc1.connect(gainOsc);
+      osc2.connect(gainOsc);
+      this.connectSfxNode(gainOsc);
+
+      osc1.start(time);
+      osc1.stop(time + 0.5);
+      osc2.start(time);
+      osc2.stop(time + 0.5);
+
+      // 2. Thruster roar (noise burst with high-pass sweep)
+      const bufferSize = this.ctx.sampleRate * 0.6; // 0.6 seconds
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(300, time);
+      filter.frequency.exponentialRampToValueAtTime(3000, time + 0.6);
+      filter.Q.setValueAtTime(3.0, time);
+
+      const gainNoise = this.ctx.createGain();
+      gainNoise.gain.setValueAtTime(0.18, time);
+      gainNoise.gain.exponentialRampToValueAtTime(0.001, time + 0.6);
+
+      noise.connect(filter);
+      filter.connect(gainNoise);
+      this.connectSfxNode(gainNoise);
+
+      noise.start(time);
+      noise.stop(time + 0.6);
+    } catch (e) {
+      console.warn("Failed to play synth boost sound:", e);
+    }
   }
 
   // Play explosion white/brown noise blast
@@ -1118,36 +1193,61 @@ class AudioSynthesizer {
     }
  
     try {
+      const time = this.ctx.currentTime;
+      
+      // 1. Low Sine Thud (Sub-bass impact)
       const osc1 = this.ctx.createOscillator();
-      const osc2 = this.ctx.createOscillator();
       const gain1 = this.ctx.createGain();
-      const gain2 = this.ctx.createGain();
-
-      // Low sine wave thud
       osc1.type = "sine";
-      osc1.frequency.setValueAtTime(80, this.ctx.currentTime);
-      osc1.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.15);
-      gain1.gain.setValueAtTime(0.12, this.ctx.currentTime);
-      gain1.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
-
+      osc1.frequency.setValueAtTime(120, time);
+      osc1.frequency.exponentialRampToValueAtTime(35, time + 0.15);
+      gain1.gain.setValueAtTime(0.18, time);
+      gain1.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
       osc1.connect(gain1);
       this.connectSfxNode(gain1);
-      osc1.start();
-      osc1.stop(this.ctx.currentTime + 0.15);
+      osc1.start(time);
+      osc1.stop(time + 0.15);
 
-      // Springy triangle upward pitch sweep
+      // 2. Springy metallic resonance (triangle)
+      const osc2 = this.ctx.createOscillator();
+      const gain2 = this.ctx.createGain();
       osc2.type = "triangle";
-      osc2.frequency.setValueAtTime(90, this.ctx.currentTime);
-      osc2.frequency.linearRampToValueAtTime(220, this.ctx.currentTime + 0.2);
-      gain2.gain.setValueAtTime(0.06, this.ctx.currentTime);
-      gain2.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
-
+      osc2.frequency.setValueAtTime(90, time);
+      osc2.frequency.linearRampToValueAtTime(200, time + 0.18);
+      gain2.gain.setValueAtTime(0.08, time);
+      gain2.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
       osc2.connect(gain2);
       this.connectSfxNode(gain2);
-      osc2.start();
-      osc2.stop(this.ctx.currentTime + 0.2);
+      osc2.start(time);
+      osc2.stop(time + 0.18);
+
+      // 3. Pneumatic Hiss (suspension compression using filtered noise)
+      const bufferSize = this.ctx.sampleRate * 0.2; // 0.2 seconds
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(400, time);
+      filter.frequency.exponentialRampToValueAtTime(100, time + 0.2);
+      filter.Q.setValueAtTime(2.0, time);
+
+      const gain3 = this.ctx.createGain();
+      gain3.gain.setValueAtTime(0.15, time);
+      gain3.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+
+      noise.connect(filter);
+      filter.connect(gain3);
+      this.connectSfxNode(gain3);
+      noise.start(time);
+      noise.stop(time + 0.2);
     } catch (e) {
-      // Ignore
+      console.warn("Failed to play synth landing sound:", e);
     }
   }
 
