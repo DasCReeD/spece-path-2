@@ -154,6 +154,17 @@ function createMinimalDOM() {
         </div>
       </div>
 
+      <div class="calibrator-group-card">
+        <div class="group-header">5. DAMAGE & WEIGHT TUNING</div>
+        <div class="sliders-list">
+          <input type="range" id="input-damageModifier" value="1.0">
+          <span id="val-damageModifier">1.0</span>
+          <input type="range" id="input-shipMass" value="1.0">
+          <span id="val-shipMass">1.0</span>
+        </div>
+      </div>
+
+
       <button id="btn-calibrator-reset"></button>
       <button id="btn-calibrator-save-default"></button>
       <button id="btn-calibrator-close"></button>
@@ -1093,6 +1104,9 @@ describe('GameManager (app.js)', () => {
     it('should step backwards through history during active rewind', async () => {
       await startLevel();
       const manager = window.gameManagerInstance;
+      manager.physics.difficulty = 'easy';
+      manager.rewindBudgetMax = Infinity;
+      manager.rewindBudget = Infinity;
       manager.rewindEnabled = true;
       manager.gameState = 'death';
       manager.stateHistory = Array.from({ length: 10 }, (_, i) => ({

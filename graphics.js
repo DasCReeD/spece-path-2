@@ -30,6 +30,7 @@ import scoutClassUrl from './assets/custom/scout.glb?url';
 import dreadnoughtClassUrl from './assets/custom/dreadnought.glb?url';
 import cruiserClassUrl from './assets/custom/cruiser.glb?url';
 import racerClassUrl from './assets/custom/racer.glb?url';
+import hovdiClassUrl from './assets/custom/hovdi.glb?url';
 import uvMapUrl from './uvmap.jpg';
 import cityFbxUrl from './futuristic low poly city by niko.fbx?url';
 import skyboxGltfUrl from './assets/free_colorful_sci_fi_skybox_gltf/scene.gltf?url';
@@ -57,7 +58,6 @@ import freeBattleTexUrl from './SBS - Seamless Abstract Pack - 512x512/Free Batt
 const MAJADROID_BASE = './SBS - Seamless Abstract Pack - 512x512/LowPoly-Spaceships-By-Majadroid';
 
 export const LEGACY_MODEL_ALIASES = {
-  original: 'fighter',
   corvette1: 'fighter',
   ship1: 'fighter',
   ship2: 'fighter',
@@ -80,13 +80,15 @@ export const LEGACY_MODEL_ALIASES = {
 };
 
 export const SHIP_MODELS = {
+  original: fighterObjUrl,
   // Custom Hovercraft Classes
   fighter: fighterClassUrl,
   hauler: haulerClassUrl,
   scout: scoutClassUrl,
   dreadnought: dreadnoughtClassUrl,
   cruiser: cruiserClassUrl,
-  racer: racerClassUrl
+  racer: racerClassUrl,
+  hovdi: hovdiClassUrl
 };
 
 export const SHIP_SKINS = {
@@ -110,12 +112,14 @@ export const SHIP_SKINS = {
 };
 
 export const SHIP_METRICS = {
+  original: { offset: 0.25, height: 0.20, rotationY: -Math.PI / 2 },
   fighter: { offset: 0.25, height: 0.20, rotationY: -Math.PI / 2 },
   hauler: { offset: 0.38, height: 0.22, rotationY: -Math.PI / 2 },
   scout: { offset: 0.30, height: 0.16, rotationY: -Math.PI / 2 },
   dreadnought: { offset: 0.42, height: 0.21, rotationY: -Math.PI / 2 },
   cruiser: { offset: 0.26, height: 0.18, rotationY: -Math.PI / 2 },
-  racer: { offset: 0.30, height: 0.18, rotationY: 0 }
+  racer: { offset: 0.30, height: 0.18, rotationY: 0 },
+  hovdi: { offset: 0.30, height: 0.20, rotationY: -Math.PI / 2 }
 };
 
 export const BASE_TEXTURES = {
@@ -294,7 +298,7 @@ export class GraphicsEngine {
       this.camOffset = new THREE.Vector3(0, 0.702575, 5.0); // Base height scaled so total height is 0.75 when zoomed out (followDistanceScale = 1.45)
       this.camTargetOffset = new THREE.Vector3(0, 0.4, -3.0);
       
-      this.cameraMode = 'fixed';
+      this.cameraMode = 'cockpit';
       this.zoomLevel = 'far'; // Zooms all the way out by default!
       this.followDistanceScale = 1.45;
       this.lastOnGroundHeight = 0.0;
@@ -305,8 +309,12 @@ export class GraphicsEngine {
     this.cameraPitchAdjust = 0.0;
 
     // Track Curvature (ring-road visual effect)
-    this.trackCurvatureEnabled = false;
+    this.trackCurvatureEnabled = !isTestEnv;
     this.trackCurvatureRadius = 200.0; // Ring radius: 50=extreme, 100=dramatic, 200=gentle, 400=subtle
+
+    // Initialize curvature uniforms to match defaults
+    curvatureUniforms.uCurvatureOn.value = this.trackCurvatureEnabled ? 1.0 : 0.0;
+    curvatureUniforms.uCurvatureRadius.value = this.trackCurvatureRadius;
   }
 
   init(container) {
@@ -958,8 +966,8 @@ export class GraphicsEngine {
     const isFbx = modelUrl.toLowerCase().includes('.fbx') || modelUrl.toLowerCase().includes('fbx-files') || modelUrl.toLowerCase().includes('battle');
     
     // Models with baked textures embedded in GLB (e.g. AI-generated via Trellis2)
-    const BAKED_TEXTURE_MODELS = ['racer'];
-    const hasBakedTexture = BAKED_TEXTURE_MODELS.includes(mappedModelName);
+    const BAKED_TEXTURE_MODELS = ['racer', 'hovdi'];
+    const hasBakedTexture = BAKED_TEXTURE_MODELS.includes(mappedModelName) && skinName === 'default';
     
     const applyTextureToModel = (texture, obj) => {
       if (hasBakedTexture) {
@@ -1320,7 +1328,7 @@ export class GraphicsEngine {
         const modelUrl = SHIP_MODELS[mappedModelName] || fighterClassUrl;
         const isFbx = modelUrl.toLowerCase().includes('.fbx') || modelUrl.toLowerCase().includes('fbx-files') || modelUrl.toLowerCase().includes('battle');
         const isGlb = modelUrl.toLowerCase().includes('.glb') || modelUrl.toLowerCase().includes('.gltf');
-        const rotationY = isGlb ? Math.PI : (isFbx ? -Math.PI / 2 : Math.PI);
+        const rotationY = (mappedModelName === 'hovdi' || mappedModelName === 'original') ? -Math.PI / 2 : (isGlb ? Math.PI : (isFbx ? -Math.PI / 2 : Math.PI));
         obj.rotation.y = rotationY; // Face forward
 
         obj.updateMatrixWorld(true);
@@ -1491,7 +1499,7 @@ export class GraphicsEngine {
         obj.position.set(0, 0, 0);
         const modelUrl = SHIP_MODELS[mappedModelName] || fighterClassUrl;
         const isFbx = modelUrl.toLowerCase().includes('.fbx') || modelUrl.toLowerCase().includes('fbx-files') || modelUrl.toLowerCase().includes('battle');
-        const rotationY = isFbx ? -Math.PI / 2 : Math.PI;
+        const rotationY = (mappedModelName === 'hovdi' || mappedModelName === 'original') ? -Math.PI / 2 : (isFbx ? -Math.PI / 2 : Math.PI);
         obj.rotation.y = rotationY;
 
         obj.updateMatrixWorld(true);

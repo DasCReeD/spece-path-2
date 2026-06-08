@@ -65,7 +65,7 @@ def import_glb(path):
         bpy.context.view_layer.objects.active = meshes[0]
         bpy.ops.object.join()
     
-    obj = bpy.context.active_object
+    obj = meshes[0]
     return obj
 
 

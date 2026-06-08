@@ -138,7 +138,7 @@
         <div class="center-gauge-overlay">
           <!-- Text labels exactly mapped to reference faceplate -->
           <span class="oxy-label-text">O<sub>2</sub></span>
-          <span class="fuel-label-text">FUEL</span>
+          <span class="fuel-label-text">HULL</span>
           
           <div class="digital-speed-readout">
             <span id="hud-speed-text">000</span>
@@ -639,6 +639,30 @@
           </div>
         </div>
 
+        <!-- SECTION 5: DAMAGE SYSTEM -->
+        <div class="calibrator-group-card">
+          <div class="group-header">5. DAMAGE & WEIGHT TUNING</div>
+          <div class="sliders-list">
+
+            <div class="slider-row">
+              <div class="slider-info">
+                <span class="slider-label">DAMAGE MODIFIER</span>
+                <span id="val-damageModifier" class="slider-value">1.0</span>
+              </div>
+              <input type="range" id="input-damageModifier" min="0.1" max="5.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-info">
+                <span class="slider-label">SHIP MASS (WEIGHT)</span>
+                <span id="val-shipMass" class="slider-value">1.0</span>
+              </div>
+              <input type="range" id="input-shipMass" min="0.5" max="5.0" step="0.1" value="1.0">
+            </div>
+
+          </div>
+        </div>
+
       </div>
 
       <!-- Action Buttons -->
@@ -817,8 +841,8 @@
         <div class="ship-skins-sidebar">
           <div class="sidebar-section-title">FLEET SELECTOR</div>
           <div class="ship-models-list">
-            <div class="model-option active" data-model="fighter">
-              <div class="model-name">HOVERCRAFT FIGHTER</div>
+            <div class="model-option active" data-model="original">
+              <div class="model-name">STARFIRE FIGHTER</div>
             </div>
             <div class="model-option" data-model="hauler">
               <div class="model-name">HOVERCRAFT HAULER</div>
@@ -834,6 +858,9 @@
             </div>
             <div class="model-option" data-model="racer">
               <div class="model-name">COMBAT RACER ✨</div>
+            </div>
+            <div class="model-option" data-model="hovdi">
+              <div class="model-name">HOVDI CONCEPT 🚀</div>
             </div>
           </div>
 

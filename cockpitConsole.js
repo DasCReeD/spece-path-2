@@ -510,13 +510,18 @@ export class CockpitConsole3D {
     const maxZSpeed = (physics.activeEffects && physics.activeEffects.boost) ? (physics.maxSpeedBoost || 60) : (physics.maxSpeedNormal || 32);
     const speedPct = Math.min(100, (Math.abs(velocityZ) / maxZSpeed) * 100);
     
-    // Oxygen & Fuel
+    // Oxygen & Fuel / Hull
     const oxygen = physics.oxygen !== undefined ? Math.ceil(physics.oxygen) : 100;
-    const fuel = physics.fuel !== undefined ? Math.ceil(physics.fuel) : 10000;
-    
     let fuelPct = 100;
-    if (levelData && levelData.fuel) {
-      fuelPct = Math.min(100, (fuel / (levelData.fuel * 50)) * 100);
+    let fuel = 10000;
+    if (physics.health !== undefined) {
+      fuelPct = Math.min(100, Math.max(0, physics.health));
+      fuel = Math.ceil(physics.health);
+    } else {
+      fuel = physics.fuel !== undefined ? Math.ceil(physics.fuel) : 10000;
+      if (levelData && levelData.fuel) {
+        fuelPct = Math.min(100, (fuel / (levelData.fuel * 50)) * 100);
+      }
     }
     
     const isRebounding = !!physics.isRebounding;
@@ -628,11 +633,12 @@ export class CockpitConsole3D {
       effectColor = '#00E5FF'; // cyan
     }
 
-    this.drawLeftLCD(speedKmh, speedPct, fuel, fuelPct, oxygen, isLowFuel, isLowO2, pulseFactor);
+    const label = physics.health !== undefined ? 'HULL' : 'FUEL';
+    this.drawLeftLCD(speedKmh, speedPct, fuel, fuelPct, oxygen, isLowFuel, isLowO2, pulseFactor, label);
     this.drawLCD(
       speedKmh, fuel, oxygen, isRebounding, onGround, gravityVal,
       isLowFuel, isLowO2, pulseFactor, scoreVal,
-      nameLabel, levelLabel, effectLabel, effectColor
+      nameLabel, levelLabel, effectLabel, effectColor, label
     );
     this.drawMinimapScreen(physics, levelData, isRebounding, onGround, gravityVal);
 
@@ -643,7 +649,7 @@ export class CockpitConsole3D {
     if (this.minimapTexture) this.minimapTexture.needsUpdate = true;
   }
 
-  drawLeftLCD(speed, speedPct, fuel, fuelPct, oxygen, isLowFuel, isLowO2, pulseFactor) {
+  drawLeftLCD(speed, speedPct, fuel, fuelPct, oxygen, isLowFuel, isLowO2, pulseFactor, label = 'FUEL') {
     if (!this.leftLcdCtx) return;
     const ctx = this.leftLcdCtx;
     const w = this.leftLcdCanvas.width; // 512
@@ -757,7 +763,7 @@ export class CockpitConsole3D {
       ctx.font = 'bold 16px monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText('FUEL', 40, 280);
+      ctx.fillText(label, 40, 280);
 
       // Track background
       ctx.fillStyle = 'rgba(255, 0, 204, 0.12)';
@@ -803,7 +809,7 @@ export class CockpitConsole3D {
     }
   }
 
-  drawLCD(speed, fuel, oxygen, isRebounding, onGround, gravityVal, isLowFuel, isLowO2, pulseFactor, scoreVal = 0, nameLabel = 'LEVEL 1', levelLabel = '1', effectLabel = 'NONE', effectColor = '#737680') {
+  drawLCD(speed, fuel, oxygen, isRebounding, onGround, gravityVal, isLowFuel, isLowO2, pulseFactor, scoreVal = 0, nameLabel = 'LEVEL 1', levelLabel = '1', effectLabel = 'NONE', effectColor = '#737680', label = 'FUEL') {
     if (!this.lcdCtx) return;
     const ctx = this.lcdCtx;
     const w = this.lcdCanvas.width; // 512
@@ -872,19 +878,21 @@ export class CockpitConsole3D {
         ctx.fillText(`OXY: ${String(oxygen).padStart(3, '0')}%`, col1X, 35);
       }
       
-      // Fuel status line
+      // Fuel/Hull status line
       if (isLowFuel) {
         ctx.fillStyle = '#ff003c';
         ctx.shadowColor = '#ff003c';
         if (Math.floor(Date.now() / 250) % 2 === 0) {
-          ctx.fillText(`FUEL: DANGER`, col1X, 80);
+          ctx.fillText(`${label}: DANGER`, col1X, 80);
         } else {
-          ctx.fillText(`FUEL: ${String(fuel).padStart(5, '0')} (LOW)`, col1X, 80);
+          const valStr = label === 'HULL' ? `${String(fuel).padStart(3, '0')}%` : String(fuel).padStart(5, '0');
+          ctx.fillText(`${label}: ${valStr} (LOW)`, col1X, 80);
         }
       } else {
         ctx.fillStyle = '#00ffcc';
         ctx.shadowColor = '#00ffcc';
-        ctx.fillText(`FUEL: ${String(fuel).padStart(5, '0')}`, col1X, 80);
+        const valStr = label === 'HULL' ? `${String(fuel).padStart(3, '0')}%` : String(fuel).padStart(5, '0');
+        ctx.fillText(`${label}: ${valStr}`, col1X, 80);
       }
       
       // Gravity status line

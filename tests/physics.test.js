@@ -1468,5 +1468,125 @@ describe('PhysicsEngine', () => {
       expect(physics.isDead).toBe(false);
     });
   });
+
+  // ── Collision Damage System & Difficulty Modes ─────────────────────────
+  describe('Collision Damage System & Difficulty Modes', () => {
+    it('should initialize ship with 100% health', () => {
+      physics.reset(100, 100);
+      expect(physics.health).toBe(100.0);
+    });
+
+    it('should not take collision damage in easy mode', () => {
+      physics.reset(100, 100);
+      physics.difficulty = 'easy';
+      physics.position.set(0, 0.2, -5.5);
+      physics.velocity.z = -10.0;
+      const obstacle = createObstacleBlock({
+        minX: -1.0, maxX: 1.0,
+        minY: 0.0, maxY: 2.0,
+        minZ: -10.0, maxZ: -5.5
+      });
+      const collidingLevel = createLevelInfo({ collidables: [obstacle] });
+      physics.update(0.05, keyboard, collidingLevel);
+      
+      expect(physics.isDead).toBe(false);
+      expect(physics.health).toBe(100.0);
+    });
+
+    it('should deduct health on frontal collision in normal mode and bounce back', () => {
+      physics.reset(100, 100);
+      physics.difficulty = 'normal';
+      physics.position.set(0, 0.2, -5.5);
+      physics.velocity.z = -10.0; // speed = 10
+      physics.settings.damageModifier = 1.0;
+      physics.settings.shipMass = 1.0;
+      const obstacle = createObstacleBlock({
+        minX: -1.0, maxX: 1.0,
+        minY: 0.0, maxY: 2.0,
+        minZ: -10.0, maxZ: -5.5
+      });
+      const collidingLevel = createLevelInfo({ collidables: [obstacle] });
+      physics.update(0.05, keyboard, collidingLevel);
+
+      // Expected damage = 9.8 * 1 * 1 * 1.5 = 14.7 (impact speed is 9.8 after 0.05s natural drag)
+      // Expected health = 100.0 - 14.7 = 85.3
+      expect(physics.isDead).toBe(false);
+      expect(physics.health).toBeCloseTo(85.3, 1);
+      expect(physics.velocity.z).toBe(10.0); // bounce back velocity
+    });
+
+    it('should deduct health on side collision in normal mode and slide', () => {
+      physics.reset(100, 100);
+      physics.difficulty = 'normal';
+      physics.position.set(0.8, 0.2, -8.0); // block center is 0, ship starts at x=0.8 (overlapping block)
+      physics.velocity.set(-4.0, 0, -10.0); // lateral speed = 4
+      physics.settings.damageModifier = 1.0;
+      physics.settings.shipMass = 1.0;
+      const obstacle = createObstacleBlock({
+        minX: -1.0, maxX: 1.0,
+        minY: 0.0, maxY: 2.0,
+        minZ: -10.0, maxZ: -6.0
+      });
+      const collidingLevel = createLevelInfo({ collidables: [obstacle] });
+      physics.update(0.05, keyboard, collidingLevel);
+
+      // Expected damage = 2.6 * 1 * 1 * 1.5 = 3.9 (impact speed is 2.6 after 0.05s lateral steering drag)
+      // Expected health = 100.0 - 3.9 = 96.1
+      expect(physics.isDead).toBe(false);
+      expect(physics.health).toBeCloseTo(96.1, 1);
+      expect(physics.velocity.x).toBe(0); // lateral velocity zeroed
+    });
+
+    it('should scale damage based on damageModifier and shipMass settings', () => {
+      physics.reset(100, 100);
+      physics.difficulty = 'normal';
+      physics.position.set(0, 0.2, -5.5);
+      physics.velocity.z = -10.0;
+      physics.settings.damageModifier = 2.0;
+      physics.settings.shipMass = 1.5;
+      const obstacle = createObstacleBlock({
+        minX: -1.0, maxX: 1.0,
+        minY: 0.0, maxY: 2.0,
+        minZ: -10.0, maxZ: -5.5
+      });
+      const collidingLevel = createLevelInfo({ collidables: [obstacle] });
+      physics.update(0.05, keyboard, collidingLevel);
+
+      // Expected damage = 9.8 * 1.5 * 2.0 * 1.5 = 44.1 (impact speed is 9.8 after 0.05s natural drag)
+      // Expected health = 100 - 44.1 = 55.9
+      expect(physics.isDead).toBe(false);
+      expect(physics.health).toBeCloseTo(55.9, 1);
+    });
+
+    it('should trigger instant death in normal mode if damage exceeds current health', () => {
+      physics.reset(100, 100);
+      physics.health = 10.0; // low health
+      physics.difficulty = 'normal';
+      physics.position.set(0, 0.2, -5.5);
+      physics.velocity.z = -10.0; // damage = 15.0 > 10.0
+      physics.settings.damageModifier = 1.0;
+      physics.settings.shipMass = 1.0;
+      const obstacle = createObstacleBlock({
+        minX: -1.0, maxX: 1.0,
+        minY: 0.0, maxY: 2.0,
+        minZ: -10.0, maxZ: -5.5
+      });
+      const collidingLevel = createLevelInfo({ collidables: [obstacle] });
+      physics.update(0.05, keyboard, collidingLevel);
+
+      expect(physics.isDead).toBe(true);
+      expect(physics.deathReason).toBe('COLLIDED WITH BLOCK');
+      expect(physics.health).toBe(0);
+    });
+
+    it('should restore health to 100% when passing over a refill tile', () => {
+      physics.reset(100, 100);
+      physics.health = 50.0;
+      const refillTile = createSpecialTile('refill');
+      const refillLevel = createLevelInfo({ specialTiles: [refillTile] });
+      physics.update(0.05, keyboard, refillLevel);
+      expect(physics.health).toBe(100.0);
+    });
+  });
 });
 

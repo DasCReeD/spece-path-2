@@ -106,9 +106,7 @@ class GameManager {
   }
 
   init() {
-    // Load persisted model, skin texture, and custom color overlay preferences FIRST
     const LEGACY_MODEL_ALIASES = {
-      original: 'fighter',
       corvette1: 'fighter',
       ship1: 'fighter',
       ship2: 'fighter',
@@ -130,15 +128,23 @@ class GameManager {
       ship5: 'dreadnought'
     };
     
-    let savedModel = localStorage.getItem('skyroads_selected_model') || 'fighter';
+    let savedModel = localStorage.getItem('skyroads_selected_model') || 'original';
     if (LEGACY_MODEL_ALIASES[savedModel]) {
       savedModel = LEGACY_MODEL_ALIASES[savedModel];
       localStorage.setItem('skyroads_selected_model', savedModel);
     }
-    this.selectedModel = savedModel;
     
-    let savedSkin = localStorage.getItem('skyroads_selected_skin');
+    let savedSkin = localStorage.getItem('skyroads_selected_skin') || 'default';
     let savedColor = localStorage.getItem('skyroads_selected_color');
+
+    // Revert to original Starfire Fighter with default green skin if currently set to hovdi or fighter
+    if (savedModel === 'hovdi' || savedModel === 'fighter') {
+      savedModel = 'original';
+      savedSkin = 'default';
+      localStorage.setItem('skyroads_selected_model', 'original');
+      localStorage.setItem('skyroads_selected_skin', 'default');
+    }
+    this.selectedModel = savedModel;
 
     // Migration of legacy hex values inside skyroads_selected_skin
     if (savedSkin && savedSkin.startsWith('#')) {
@@ -179,7 +185,7 @@ class GameManager {
     this.updateBoatThrottleToggleBtn();
 
     // Load persisted difficulty setting from localStorage
-    const savedDifficulty = localStorage.getItem('skyroads_difficulty') || 'easy';
+    const savedDifficulty = localStorage.getItem('skyroads_difficulty') || 'normal';
     this.physics.difficulty = savedDifficulty;
     this.updateDifficultyToggleBtn();
 
@@ -233,10 +239,10 @@ class GameManager {
     // Initialize tunable physics preset profiles by loading from localStorage or falling back to defaults
     this.physicsPresets = { vga: {}, snappy: {}, lunar: {}, custom: {} };
     const basePresets = {
-      vga: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 25, dragSteer: 18, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.0, gravityFactor: 1.0, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0 },
-      snappy: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 35, dragSteer: 28, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.25, gravityFactor: 1.45, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0 },
-      lunar: { maxSpeedNormal: 24, maxSpeedBoost: 50, accelForward: 12, decelBrakes: 25, dragZ: 2, maxSteerSpeed: 8, steerAccel: 15, dragSteer: 8, laneSnapStrength: 4.0, easyCollisionBounceVel: 8, easyCollisionBounceDist: 1.5, bounceFactor: 1.5, jumpImpulse: 7.5, jumpFactor: 1.0, gravityFactor: 0.45, fallGravityMultiplier: 1.15, variableJumpDampening: 0.90, coyoteTimeBuffer: 0.40, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0 },
-      custom: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 35, dragSteer: 28, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.0, gravityFactor: 1.0, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0 }
+      vga: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 25, dragSteer: 18, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.0, gravityFactor: 1.0, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0, damageModifier: 1.0, shipMass: 1.0 },
+      snappy: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 35, dragSteer: 28, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.25, gravityFactor: 1.45, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0, damageModifier: 1.0, shipMass: 1.0 },
+      lunar: { maxSpeedNormal: 24, maxSpeedBoost: 50, accelForward: 12, decelBrakes: 25, dragZ: 2, maxSteerSpeed: 8, steerAccel: 15, dragSteer: 8, laneSnapStrength: 4.0, easyCollisionBounceVel: 8, easyCollisionBounceDist: 1.5, bounceFactor: 1.5, jumpImpulse: 7.5, jumpFactor: 1.0, gravityFactor: 0.45, fallGravityMultiplier: 1.15, variableJumpDampening: 0.90, coyoteTimeBuffer: 0.40, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0, damageModifier: 1.0, shipMass: 1.0 },
+      custom: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 35, dragSteer: 28, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.0, gravityFactor: 1.0, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0, damageModifier: 1.0, shipMass: 1.0 }
     };
 
     for (const key in basePresets) {
@@ -500,17 +506,19 @@ class GameManager {
   }
 
   updateDifficultyToggleBtn() {
-    const isEasy = this.physics.difficulty === 'easy';
+    const diff = this.physics.difficulty || 'normal';
     const btn = document.getElementById('btn-settings-difficulty');
     if (!btn) return;
-    if (isEasy) {
+    btn.classList.remove('btn-info', 'btn-secondary', 'btn-primary', 'btn-danger');
+    if (diff === 'easy') {
       btn.innerText = 'DIFFICULTY: EASY';
-      btn.classList.remove('btn-secondary');
       btn.classList.add('btn-info');
+    } else if (diff === 'normal') {
+      btn.innerText = 'DIFFICULTY: NORMAL';
+      btn.classList.add('btn-primary');
     } else {
       btn.innerText = 'DIFFICULTY: HARD';
-      btn.classList.remove('btn-info');
-      btn.classList.add('btn-secondary');
+      btn.classList.add('btn-danger');
     }
   }
 
@@ -1031,11 +1039,38 @@ class GameManager {
     if (btnSettingsDifficulty) {
       btnSettingsDifficulty.addEventListener('click', () => {
         gameAudio.playClick();
-        const currentDiff = this.physics.difficulty;
-        const nextDiff = currentDiff === 'easy' ? 'hard' : 'easy';
+        const currentDiff = this.physics.difficulty || 'normal';
+        let nextDiff = 'normal';
+        if (currentDiff === 'easy') {
+          nextDiff = 'normal';
+        } else if (currentDiff === 'normal') {
+          nextDiff = 'hard';
+        } else {
+          nextDiff = 'easy';
+        }
         this.physics.difficulty = nextDiff;
         localStorage.setItem('skyroads_difficulty', nextDiff);
         this.updateDifficultyToggleBtn();
+
+        // Dynamically update budget and hide/show rewind UI if level is running
+        if (this.gameState === 'playing' || this.gameState === 'paused' || this.gameState === 'death') {
+          if (nextDiff === 'easy') {
+            this.rewindBudgetMax = Infinity;
+          } else if (nextDiff === 'normal') {
+            this.rewindBudgetMax = 10.0;
+          } else {
+            this.rewindBudgetMax = 0.0;
+          }
+          this.rewindBudget = Math.min(this.rewindBudget, this.rewindBudgetMax);
+          const rewindRow = document.getElementById('hud-rewind-row');
+          if (rewindRow) {
+            rewindRow.classList.toggle('hidden', !this.rewindEnabled || nextDiff === 'hard');
+          }
+          const rewindText = document.getElementById('hud-rewind-text');
+          if (rewindText) {
+            rewindText.innerText = nextDiff === 'easy' ? '∞' : `${this.rewindBudget.toFixed(1)}s`;
+          }
+        }
       });
     }
 
@@ -1301,10 +1336,10 @@ class GameManager {
       btnCalibratorReset.addEventListener('click', () => {
         gameAudio.playClick();
         const basePresets = {
-          vga: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 25, dragSteer: 18, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.0, gravityFactor: 1.0, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0 },
-          snappy: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 35, dragSteer: 28, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.25, gravityFactor: 1.45, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0 },
-          lunar: { maxSpeedNormal: 24, maxSpeedBoost: 50, accelForward: 12, decelBrakes: 25, dragZ: 2, maxSteerSpeed: 8, steerAccel: 15, dragSteer: 8, laneSnapStrength: 4.0, easyCollisionBounceVel: 8, easyCollisionBounceDist: 1.5, bounceFactor: 1.5, jumpImpulse: 7.5, jumpFactor: 1.0, gravityFactor: 0.45, fallGravityMultiplier: 1.15, variableJumpDampening: 0.90, coyoteTimeBuffer: 0.40, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0 },
-          custom: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 35, dragSteer: 28, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.0, gravityFactor: 1.0, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0 }
+          vga: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 25, dragSteer: 18, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.0, gravityFactor: 1.0, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0, damageModifier: 1.0, shipMass: 1.0 },
+          snappy: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 35, dragSteer: 28, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.25, gravityFactor: 1.45, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0, damageModifier: 1.0, shipMass: 1.0 },
+          lunar: { maxSpeedNormal: 24, maxSpeedBoost: 50, accelForward: 12, decelBrakes: 25, dragZ: 2, maxSteerSpeed: 8, steerAccel: 15, dragSteer: 8, laneSnapStrength: 4.0, easyCollisionBounceVel: 8, easyCollisionBounceDist: 1.5, bounceFactor: 1.5, jumpImpulse: 7.5, jumpFactor: 1.0, gravityFactor: 0.45, fallGravityMultiplier: 1.15, variableJumpDampening: 0.90, coyoteTimeBuffer: 0.40, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0, damageModifier: 1.0, shipMass: 1.0 },
+          custom: { maxSpeedNormal: 32, maxSpeedBoost: 60, accelForward: 18, decelBrakes: 35, dragZ: 4, maxSteerSpeed: 10, steerAccel: 35, dragSteer: 28, laneSnapStrength: 4.0, easyCollisionBounceVel: 10, easyCollisionBounceDist: 1.2, bounceFactor: 1.0, jumpImpulse: 10.5, jumpFactor: 1.0, gravityFactor: 1.0, fallGravityMultiplier: 1.45, variableJumpDampening: 0.82, coyoteTimeBuffer: 0.25, cockpitOffsetX: 0.0, cockpitOffsetY: 0.0, cockpitOffsetZ: 0.0, showCockpitBezel: 1.0, damageModifier: 1.0, shipMass: 1.0 }
         };
 
         // Check if there is a custom baseline override saved for this specific active preset
@@ -1653,18 +1688,24 @@ class GameManager {
     this.rewindTimeoutId = null;
     this.isRewinding = false;
     this.rewindHistoryIndex = -1;
-    // Rewind budget: unlimited on easy, 10s on harder difficulties
-    const isEasyRewind = this.physics.difficulty === 'easy';
-    this.rewindBudgetMax = isEasyRewind ? Infinity : 10.0;
+    // Rewind budget: unlimited on easy, 10s on normal, 0s (no rewind) on hard
+    const diff = this.physics.difficulty || 'normal';
+    if (diff === 'easy') {
+      this.rewindBudgetMax = Infinity;
+    } else if (diff === 'normal') {
+      this.rewindBudgetMax = 10.0;
+    } else {
+      this.rewindBudgetMax = 0.0;
+    }
     this.rewindBudget = this.rewindBudgetMax;
     // Show/hide rewind budget HUD
     const rewindRow = document.getElementById('hud-rewind-row');
     if (rewindRow) {
-      rewindRow.classList.toggle('hidden', !this.rewindEnabled);
+      rewindRow.classList.toggle('hidden', !this.rewindEnabled || diff === 'hard');
     }
     const rewindText = document.getElementById('hud-rewind-text');
     if (rewindText) {
-      rewindText.innerText = isEasyRewind ? '∞' : '10.0s';
+      rewindText.innerText = diff === 'easy' ? '∞' : `${this.rewindBudgetMax.toFixed(1)}s`;
     }
     
     // Bind to window to allow physics engine's gap detection lookup
@@ -2114,6 +2155,7 @@ class GameManager {
             justRebounded: this.physics.justRebounded,
             fuel: this.physics.fuel,
             oxygen: this.physics.oxygen,
+            health: this.physics.health,
             activeEffects: { ...this.physics.activeEffects },
             wallHits: this.wallHits,
             totalTime: this.totalTime,
@@ -2233,19 +2275,25 @@ class GameManager {
     const legacyOxygenBar = document.getElementById('hud-oxygen-bar');
     if (legacyOxygenBar) legacyOxygenBar.style.width = `${oxygen}%`;
 
-    // Fuel (Original DOS maps scale)
+    // Fuel (Original DOS maps scale) / Hull
     const fuel = Math.ceil(this.physics.fuel);
-    document.getElementById('hud-fuel-text').innerText = String(fuel).padStart(5, '0');
-    const fuelPct = Math.min(100, (this.physics.fuel / (this.levelInfo.fuel * 50)) * 100);
+    let hullPct = 100;
+    if (this.physics.health !== undefined) {
+      hullPct = Math.min(100, Math.max(0, this.physics.health));
+      document.getElementById('hud-fuel-text').innerText = String(Math.ceil(hullPct)).padStart(3, '0') + '%';
+    } else {
+      hullPct = Math.min(100, (this.physics.fuel / (this.levelInfo.fuel * 50)) * 100);
+      document.getElementById('hud-fuel-text').innerText = String(fuel).padStart(5, '0');
+    }
     
     // SVG Fuel arc (semicircular length = 194.78)
-    const fuelOffset = 194.78 - (fuelPct / 100) * 194.78;
+    const fuelOffset = 194.78 - (hullPct / 100) * 194.78;
     const fuelArc = document.getElementById('gauge-fuel-arc');
     if (fuelArc) fuelArc.style.strokeDashoffset = fuelOffset;
     
     // Legacy support for unit tests
     const legacyFuelBar = document.getElementById('hud-fuel-bar');
-    if (legacyFuelBar) legacyFuelBar.style.width = `${fuelPct}%`;
+    if (legacyFuelBar) legacyFuelBar.style.width = `${hullPct}%`;
 
     // Progress Bar
     const absoluteZ = -this.physics.position.z;
@@ -2323,6 +2371,8 @@ class GameManager {
       msg = "Life support systems failed. You ran out of oxygen.";
     } else if (this.physics.deathReason === 'BURNED TO CRIPPLES') {
       msg = "Your hull melted immediately on contact with a burning tile.";
+    } else if (this.physics.deathReason === 'HULL FAILURE') {
+      msg = "Your hull integrity dropped to 0%.";
     }
 
     const reasonEl = document.getElementById('death-reason');
@@ -2402,6 +2452,9 @@ class GameManager {
       // Grace resource boosts to prevent instant re-death loops
       this.physics.fuel = Math.max(snap.fuel, 500);
       this.physics.oxygen = Math.max(snap.oxygen, 15);
+      if (snap.health !== undefined) {
+        this.physics.health = Math.max(snap.health, 20.0);
+      }
 
       this.physics.activeEffects = { ...snap.activeEffects };
 

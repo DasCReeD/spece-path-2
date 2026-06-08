@@ -101,6 +101,7 @@ export class PhysicsEngine {
     this.deathReason = '';
     this.difficulty = 'hard';
     this.isTransitioning = false;
+    this.health = 100.0;
     
     // Classic landing bounce (rebound) parameters
     this.isRebounding = false;
@@ -126,6 +127,8 @@ export class PhysicsEngine {
       gravityFactor: 1.0,
       jumpFactor: 1.0,
       fuelConsumptionRate: 25.0,
+      damageModifier: 1.0,
+      shipMass: 1.0,
       
       // Configurable Throttle
       maxSpeedNormal: 32.0,
@@ -178,6 +181,7 @@ export class PhysicsEngine {
     this.justRebounded = false;
     this.fuel = startFuel * 50; // Map original DOS fuel scale
     this.oxygen = startOxygen;
+    this.health = 100.0; // Initialize health to 100%
     
     this.activeEffects = {
       boost: false,
@@ -228,16 +232,23 @@ export class PhysicsEngine {
       return;
     }
 
-    // 1. Consume Fuel & Oxygen
-    if (Math.abs(this.velocity.z) > 0.5) {
-      const rate = this.fuelConsumptionRate !== undefined ? this.fuelConsumptionRate : 25.0;
-      this.fuel = Math.max(0, this.fuel - dt * rate * ((this.activeEffects.boost || this.activeEffects.superBoost) ? 2.5 : 1.0));
+    // 1. Consume Fuel (only in hard difficulty) & Oxygen
+    if (this.difficulty === 'hard') {
+      if (Math.abs(this.velocity.z) > 0.5) {
+        const rate = this.fuelConsumptionRate !== undefined ? this.fuelConsumptionRate : 25.0;
+        this.fuel = Math.max(0, this.fuel - dt * rate * ((this.activeEffects.boost || this.activeEffects.superBoost) ? 2.5 : 1.0));
+      }
     }
     this.oxygen = Math.max(0, this.oxygen - dt * 1.0); // 1 unit per second
 
     if (this.fuel <= 0) {
       this.isDead = true;
       this.deathReason = 'OUT OF FUEL';
+      return;
+    }
+    if (this.difficulty !== 'hard' && this.health !== undefined && this.health <= 0) {
+      this.isDead = true;
+      this.deathReason = 'HULL FAILURE';
       return;
     }
     if (this.oxygen <= 0) {
@@ -466,6 +477,26 @@ export class PhysicsEngine {
                 
                 // Update the ship's bounding box
                 shipBox = this.getShipBox();
+              } else if (this.difficulty === 'normal') {
+                const shipMass = this.settings.shipMass !== undefined ? this.settings.shipMass : 1.0;
+                const damageModifier = this.settings.damageModifier !== undefined ? this.settings.damageModifier : 1.0;
+                const impactSpeed = Math.abs(this.velocity.z);
+                const damage = impactSpeed * shipMass * damageModifier * 1.5;
+                if (this.health > damage) {
+                  this.health -= damage;
+                  // Bounce back
+                  this.velocity.z = this.settings.easyCollisionBounceVel !== undefined ? this.settings.easyCollisionBounceVel : 10.0;
+                  this.position.z += this.settings.easyCollisionBounceDist !== undefined ? this.settings.easyCollisionBounceDist : 1.2;
+                  this.triggerWallCollisionAudio = true;
+                  this.velocity.x = 0;
+                  shipBox = this.getShipBox();
+                } else {
+                  this.health = 0;
+                  this.isDead = true;
+                  this.deathReason = 'COLLIDED WITH BLOCK';
+                  this.velocity.set(0, 0, 0);
+                  return;
+                }
               } else {
                 this.isDead = true;
                 this.deathReason = 'COLLIDED WITH BLOCK';
@@ -502,6 +533,23 @@ export class PhysicsEngine {
                 } else {
                   this.position.x = block.minX - halfW - 0.01;
                 }
+
+                if (this.difficulty === 'normal') {
+                  const shipMass = this.settings.shipMass !== undefined ? this.settings.shipMass : 1.0;
+                  const damageModifier = this.settings.damageModifier !== undefined ? this.settings.damageModifier : 1.0;
+                  const impactSpeed = Math.abs(this.velocity.x);
+                  const damage = impactSpeed * shipMass * damageModifier * 1.5;
+                  if (this.health > damage) {
+                    this.health -= damage;
+                  } else {
+                    this.health = 0;
+                    this.isDead = true;
+                    this.deathReason = 'COLLIDED WITH BLOCK';
+                    this.velocity.set(0, 0, 0);
+                    return;
+                  }
+                }
+
                 this.velocity.x = 0;
                 this.triggerWallCollisionAudio = true;
                 shipBox = this.getShipBox();
@@ -577,6 +625,26 @@ export class PhysicsEngine {
                   
                   // Update the ship's bounding box
                   shipBox = this.getShipBox();
+                } else if (this.difficulty === 'normal') {
+                  const shipMass = this.settings.shipMass !== undefined ? this.settings.shipMass : 1.0;
+                  const damageModifier = this.settings.damageModifier !== undefined ? this.settings.damageModifier : 1.0;
+                  const impactSpeed = Math.abs(this.velocity.z);
+                  const damage = impactSpeed * shipMass * damageModifier * 1.5;
+                  if (this.health > damage) {
+                    this.health -= damage;
+                    // Bounce back
+                    this.velocity.z = this.settings.easyCollisionBounceVel !== undefined ? this.settings.easyCollisionBounceVel : 10.0;
+                    this.position.z += this.settings.easyCollisionBounceDist !== undefined ? this.settings.easyCollisionBounceDist : 1.2;
+                    this.triggerWallCollisionAudio = true;
+                    this.velocity.x = 0;
+                    shipBox = this.getShipBox();
+                  } else {
+                    this.health = 0;
+                    this.isDead = true;
+                    this.deathReason = 'COLLIDED WITH BLOCK';
+                    this.velocity.set(0, 0, 0);
+                    return;
+                  }
                 } else {
                   // Front collision -> Crash!
                   this.isDead = true;
@@ -598,6 +666,23 @@ export class PhysicsEngine {
                 // Push to the left of the block
                 this.position.x = block.minX - halfW - 0.01;
               }
+
+              if (this.difficulty === 'normal') {
+                const shipMass = this.settings.shipMass !== undefined ? this.settings.shipMass : 1.0;
+                const damageModifier = this.settings.damageModifier !== undefined ? this.settings.damageModifier : 1.0;
+                const impactSpeed = Math.abs(this.velocity.x);
+                const damage = impactSpeed * shipMass * damageModifier * 1.5;
+                if (this.health > damage) {
+                  this.health -= damage;
+                } else {
+                  this.health = 0;
+                  this.isDead = true;
+                  this.deathReason = 'COLLIDED WITH BLOCK';
+                  this.velocity.set(0, 0, 0);
+                  return;
+                }
+              }
+
               // Stop lateral steering velocity
               this.velocity.x = 0;
 
@@ -746,11 +831,12 @@ export class PhysicsEngine {
         } else if (behavior === 'high_jump') {
           this.activeEffects.highJump = true;
         } else if (behavior === 'refill') {
-          // Refills occur instantaneously, adding fuel and resetting oxygen to max
+          // Refills occur instantaneously, restoring health, adding fuel, and resetting oxygen to max
           if (this.fuel < 100 * 50) {
             this.fuel = Math.min(100 * 50, this.fuel + 1000);
           }
           this.oxygen = 100;
+          this.health = 100.0;
           
           // Trigger a sound chime (we set a flag to notify app.js)
           this.triggerRefillAudio = true;
@@ -761,7 +847,6 @@ export class PhysicsEngine {
 
   applyShipClass(className) {
     const LEGACY_MODEL_ALIASES = {
-      original: 'fighter',
       corvette1: 'fighter',
       ship1: 'fighter',
       ship2: 'fighter',
