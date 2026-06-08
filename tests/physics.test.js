@@ -1522,6 +1522,7 @@ describe('PhysicsEngine', () => {
       physics.velocity.set(-4.0, 0, -10.0); // lateral speed = 4
       physics.settings.damageModifier = 1.0;
       physics.settings.shipMass = 1.0;
+      physics.settings.minDamageSpeed = 0.0; // Disable cutoff for this test
       const obstacle = createObstacleBlock({
         minX: -1.0, maxX: 1.0,
         minY: 0.0, maxY: 2.0,
@@ -1535,6 +1536,25 @@ describe('PhysicsEngine', () => {
       expect(physics.isDead).toBe(false);
       expect(physics.health).toBeCloseTo(96.1, 1);
       expect(physics.velocity.x).toBe(0); // lateral velocity zeroed
+    });
+
+    it('should not deduct health if impact speed is below minDamageSpeed (4.0 units/s / 40 kph)', () => {
+      physics.reset(100, 100);
+      physics.difficulty = 'normal';
+      physics.position.set(0.8, 0.2, -8.0);
+      physics.velocity.set(-4.0, 0, -10.0); // lateral speed = 4 -> drops to 2.6 after drag (< 4.0)
+      physics.settings.damageModifier = 1.0;
+      physics.settings.shipMass = 1.0;
+      physics.settings.minDamageSpeed = 4.0; // Enable 40 kph cutoff
+      const obstacle = createObstacleBlock({
+        minX: -1.0, maxX: 1.0,
+        minY: 0.0, maxY: 2.0,
+        minZ: -10.0, maxZ: -6.0
+      });
+      const collidingLevel = createLevelInfo({ collidables: [obstacle] });
+      physics.update(0.05, keyboard, collidingLevel);
+
+      expect(physics.health).toBe(100.0); // No damage taken
     });
 
     it('should scale damage based on damageModifier and shipMass settings', () => {

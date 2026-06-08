@@ -504,11 +504,10 @@ export class CockpitConsole3D {
     if (this.casing) this.casing.visible = showBezel;
     if (this.border) this.border.visible = showBezel;
     
-    // Calculate Speedometer Pct
+    // Calculate Speedometer Pct relative to absolute max of 600 km/h
     const velocityZ = physics.velocity ? physics.velocity.z : 0;
     const speedKmh = Math.floor(Math.abs(velocityZ) * 10);
-    const maxZSpeed = (physics.activeEffects && physics.activeEffects.boost) ? (physics.maxSpeedBoost || 60) : (physics.maxSpeedNormal || 32);
-    const speedPct = Math.min(100, (Math.abs(velocityZ) / maxZSpeed) * 100);
+    const speedPct = Math.min(100, (speedKmh / 600) * 100);
     
     // Oxygen & Fuel / Hull
     const oxygen = physics.oxygen !== undefined ? Math.ceil(physics.oxygen) : 100;
@@ -711,7 +710,7 @@ export class CockpitConsole3D {
       ctx.font = 'bold 15px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const labelSpeedVals = [0, 20, 40, 60, 80, 100, 120, 140, 160];
+      const labelSpeedVals = [0, 75, 150, 225, 300, 375, 450, 525, 600];
       for (let i = 0; i <= 8; i++) {
         const pct = i / 8;
         const angle = 0.75 * Math.PI + pct * 1.5 * Math.PI;

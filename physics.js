@@ -129,6 +129,7 @@ export class PhysicsEngine {
       fuelConsumptionRate: 25.0,
       damageModifier: 1.0,
       shipMass: 1.0,
+      minDamageSpeed: 4.0,
       
       // Configurable Throttle
       maxSpeedNormal: 32.0,
@@ -482,8 +483,9 @@ export class PhysicsEngine {
               } else if (this.difficulty === 'normal') {
                 const shipMass = this.settings.shipMass !== undefined ? this.settings.shipMass : 1.0;
                 const damageModifier = this.settings.damageModifier !== undefined ? this.settings.damageModifier : 1.0;
+                const minDamageSpeed = this.settings.minDamageSpeed !== undefined ? this.settings.minDamageSpeed : 4.0;
                 const impactSpeed = Math.abs(this.velocity.z);
-                const damage = impactSpeed * shipMass * damageModifier * 1.5;
+                const damage = impactSpeed < minDamageSpeed ? 0 : impactSpeed * shipMass * damageModifier * 1.5;
                 if (this.health > damage) {
                   this.health -= damage;
                   // Bounce back
@@ -539,8 +541,9 @@ export class PhysicsEngine {
                 if (this.difficulty === 'normal') {
                   const shipMass = this.settings.shipMass !== undefined ? this.settings.shipMass : 1.0;
                   const damageModifier = this.settings.damageModifier !== undefined ? this.settings.damageModifier : 1.0;
+                  const minDamageSpeed = this.settings.minDamageSpeed !== undefined ? this.settings.minDamageSpeed : 4.0;
                   const impactSpeed = Math.abs(this.velocity.x);
-                  const damage = impactSpeed * shipMass * damageModifier * 1.5;
+                  const damage = impactSpeed < minDamageSpeed ? 0 : impactSpeed * shipMass * damageModifier * 1.5;
                   if (this.health > damage) {
                     this.health -= damage;
                   } else {
@@ -630,8 +633,9 @@ export class PhysicsEngine {
                 } else if (this.difficulty === 'normal') {
                   const shipMass = this.settings.shipMass !== undefined ? this.settings.shipMass : 1.0;
                   const damageModifier = this.settings.damageModifier !== undefined ? this.settings.damageModifier : 1.0;
+                  const minDamageSpeed = this.settings.minDamageSpeed !== undefined ? this.settings.minDamageSpeed : 4.0;
                   const impactSpeed = Math.abs(this.velocity.z);
-                  const damage = impactSpeed * shipMass * damageModifier * 1.5;
+                  const damage = impactSpeed < minDamageSpeed ? 0 : impactSpeed * shipMass * damageModifier * 1.5;
                   if (this.health > damage) {
                     this.health -= damage;
                     // Bounce back
@@ -672,8 +676,9 @@ export class PhysicsEngine {
               if (this.difficulty === 'normal') {
                 const shipMass = this.settings.shipMass !== undefined ? this.settings.shipMass : 1.0;
                 const damageModifier = this.settings.damageModifier !== undefined ? this.settings.damageModifier : 1.0;
+                const minDamageSpeed = this.settings.minDamageSpeed !== undefined ? this.settings.minDamageSpeed : 4.0;
                 const impactSpeed = Math.abs(this.velocity.x);
-                const damage = impactSpeed * shipMass * damageModifier * 1.5;
+                const damage = impactSpeed < minDamageSpeed ? 0 : impactSpeed * shipMass * damageModifier * 1.5;
                 if (this.health > damage) {
                   this.health -= damage;
                 } else {

@@ -174,8 +174,8 @@ describe('CockpitConsole3D', () => {
 
       cockpit.update(mockPhysics, null, 'cockpit');
       
-      // Speed pct ~ 50%
-      expect(cockpit.speedNeedlePivot.rotation.z).toBeCloseTo((Math.PI * 0.75) - 0.5 * Math.PI * 1.5, 2);
+      // Speed pct ~ 26.67% (160 out of 600)
+      expect(cockpit.speedNeedlePivot.rotation.z).toBeCloseTo((Math.PI * 0.75) - (160 / 600) * Math.PI * 1.5, 2);
       expect(cockpit.o2Dial.scale.y).toBeCloseTo(0.8, 2);
     });
 
