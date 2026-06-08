@@ -7,6 +7,7 @@ import { buildLevelAsync, disposeUnusedThemes, getActiveThemeIndex, curvatureUni
 import { gameAudio } from './audio.js';
 import { ShipPreviewEngine } from './preview.js';
 import { TouchControlManager } from './touchControls.js';
+import { InGameEditor } from './inGameEditor.js';
 
 const SKIN_DETAILS = {
   default: { name: "DEFAULT", desc: "Standard spaceforce combat livery" },
@@ -43,8 +44,10 @@ class GameManager {
   constructor() {
     // Engine instances
     this.graphics = new GraphicsEngine();
+    this.graphics.app = this;
     this.physics = new PhysicsEngine();
     this.keyboard = new KeyboardController();
+    this.inGameEditor = new InGameEditor(this);
     
     // Game state variables
     this.currentPack = 'standard'; // 'standard' or 'xmas'
@@ -357,6 +360,9 @@ class GameManager {
     // Global listener for Escape to toggle settings/pause menu anywhere
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Escape') {
+        if (this.gameState === 'editor' || this.playtestEscHandler) {
+          return;
+        }
         e.preventDefault();
         gameAudio.playClick();
         this.toggleSettingsMenu();
@@ -948,6 +954,27 @@ class GameManager {
       btnOpenEditor.addEventListener('click', () => {
         gameAudio.playClick();
         window.open('editor.html', '_blank');
+      });
+    }
+
+    const btnEditLevel = document.getElementById('btn-edit-level');
+    if (btnEditLevel) {
+      btnEditLevel.addEventListener('click', () => {
+        gameAudio.playClick();
+        this.inGameEditor.activate();
+      });
+    }
+
+    const btnPauseResetLevel = document.getElementById('btn-pause-reset-level');
+    if (btnPauseResetLevel) {
+      btnPauseResetLevel.addEventListener('click', () => {
+        gameAudio.playClick();
+        if (confirm("Reset all edits to this level? This cannot be undone.")) {
+          InGameEditor.resetLevelOverrides(this, this.currentPack, this.currentLevelIndex);
+          // Re-load the level
+          this.resumeGame();
+          this.startLevel(this.currentLevelIndex);
+        }
       });
     }
 
@@ -1678,6 +1705,17 @@ class GameManager {
 
     // Show target screen
     const target = document.getElementById(screenId);
+    
+    // Manage btn-edit-level visibility
+    const btnEditLevel = document.getElementById('btn-edit-level');
+    if (btnEditLevel) {
+      if (!screenId && this.gameState === 'playing') {
+        btnEditLevel.classList.remove('hidden');
+      } else {
+        btnEditLevel.classList.add('hidden');
+      }
+    }
+
     if (!target) return;
 
     target.classList.remove('hidden');
@@ -1816,8 +1854,27 @@ class GameManager {
       this.infiniteZOffset = 0;
     }
     this.currentLevelIndex = index;
-    const packLevels = getCachedPack(this.currentPack);
-    this.currentLevelData = packLevels[index];
+    
+    // Check for local storage level overrides
+    const storageKey = `skyroads_override_${this.currentPack}_${index}`;
+    const localOverride = localStorage.getItem(storageKey);
+    
+    if (localOverride) {
+      try {
+        this.currentLevelData = JSON.parse(localOverride);
+        const packLevels = getCachedPack(this.currentPack);
+        if (packLevels) {
+          packLevels[index] = this.currentLevelData;
+        }
+      } catch (e) {
+        console.warn("Failed to parse local overrides for level", index, e);
+        const packLevels = getCachedPack(this.currentPack);
+        this.currentLevelData = packLevels[index];
+      }
+    } else {
+      const packLevels = getCachedPack(this.currentPack);
+      this.currentLevelData = packLevels[index];
+    }
     
     // Initialize performance scoring trackers
     this.totalTime = 0.0;
@@ -2192,6 +2249,16 @@ class GameManager {
           }
         }
       }
+    }
+
+    if (this.gameState === 'editor') {
+      this.inGameEditor.update(dt);
+      if (this.graphics.starField) {
+        this.graphics.starField.rotation.y += 0.02 * dt;
+      }
+      this.graphics.render();
+      this.animationFrameId = requestAnimationFrame((t) => this.animate(t));
+      return;
     }
 
     if (this.gameState === 'paused') {

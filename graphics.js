@@ -2358,7 +2358,7 @@ export class GraphicsEngine {
 
   clearLevel() {
     if (this.shipMesh) {
-      this.shipMesh.visible = true;
+      this.shipMesh.visible = (!this.app || this.app.gameState !== 'editor');
     }
 
     // Reset starfield rotation to perfectly align with the track when entering a level
