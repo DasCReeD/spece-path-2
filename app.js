@@ -1992,6 +1992,7 @@ class GameManager {
     } else {
       document.getElementById('hud').classList.add('hidden');
     }
+    this.gameState = 'playing';
     this.showScreen(''); // Hide all menus
 
     // Toggle Pause Trigger button visibility
@@ -2009,7 +2010,6 @@ class GameManager {
     gameAudio.startEngine();
     gameAudio.startMusic(true);
 
-    this.gameState = 'playing';
     this.lastTime = performance.now();
 
     if (this.collisionViewEnabled) {
